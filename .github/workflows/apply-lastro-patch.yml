@@ -1,4 +1,4 @@
-name: Validate and update LASTRO
+name: Apply LASTRO updates
 
 on:
   push:
@@ -17,47 +17,58 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('central_lastro.py')
-          s=p.read_text(encoding='utf-8')
+          import re
 
-          s=s.replace("""            participant_eligible = request.form.get(\n                f'eligible_{mid}',\n                '1'\n            ) == '1'\n""", """            brought_armament = request.form.get(\n                f'armament_{mid}',\n                'NAO'\n            ).upper() == 'SIM'\n""", 1)
-          s=s.replace('participant_eligible\n                )\n            )', 'brought_armament\n                )\n            )', 1)
-          s=s.replace("""            participant_eligible = request.form.get(\n                f'external_eligible_{i}',\n                '1'\n            ) == '1'\n""", """            brought_armament = request.form.get(\n                f'external_armament_{i}',\n                'NAO'\n            ).upper() == 'SIM'\n""", 1)
-          s=s.replace('participant_eligible\n                )\n            )', 'brought_armament\n                )\n            )', 1)
-          s=s.replace("""            eligible = [\n                x\n                for x in participants\n                if x[4] and result_status == 'GANHADA'\n            ]\n""", """            eligible = participants if result_status == 'GANHADA' else []\n""", 1)
-          s=s.replace('for typ, mid, ext, side, participant_eligible in participants:', 'for typ, mid, ext, side, brought_armament in participants:', 1)
-          s=s.replace("ok = bool(participant_eligible) and result_status == 'GANHADA'", "ok = result_status == 'GANHADA'", 1)
-          s=s.replace("'Não elegível para a divisão',", "'Ação perdida',", 1)
-          s=s.replace("""                        side,\n                        '',\n                        int(ok),\n""", """                        side,\n                        'SIM' if brought_armament else 'NAO',\n                        int(ok),\n""", 1)
+          p = Path('central_lastro.py')
+          s = p.read_text(encoding='utf-8')
+          original = s
 
-          # Member selector: replace the existing eligibility select, whatever its option labels are.
-          marker='data-eligible'
-          if marker in s:
-              start=s.rfind('<div class="field">',0,s.index(marker))
-              end=s.index('</div>',s.index('</select>',s.index(marker)))+6
-              s=s[:start]+'''<div class="field">\n                            <label>\n                                Trouxe armamento?\n                            </label>\n                            <select class="select" data-armament>\n                                <option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>\n                            </select>\n                        </div>'''+s[end:]
-          s=s.replace("""        let eligible =\n            r.querySelector(\n                '[data-eligible]'\n            );\n\n        eligible.name =\n            'eligible_' + s.value;\n""", """        let armament =\n            r.querySelector(\n                '[data-armament]'\n            );\n\n        armament.name =\n            'armament_' + s.value;\n""", 1)
+          s, n = re.subn(r"participant_eligible = request\.form\.get\(\s*f'eligible_\{mid\}',\s*'0'\s*\) == '1'", "brought_armament = request.form.get(\n                f'armament_{mid}',\n                'NAO'\n            ).upper() == 'SIM'", s, count=1)
+          if n != 1: raise SystemExit('member parsing pattern not found')
+          s, n = re.subn(r"participant_eligible\s*\n\s*\)\s*\n\s*\)\s*\n\s*for i, name", "brought_armament\n                )\n            )\n\n        for i, name", s, count=1)
+          if n != 1: raise SystemExit('member tuple pattern not found')
 
-          # External selector.
-          pos=s.find('name="external_eligible_${{i}}"')
-          if pos >= 0:
-              start=s.rfind('<div class="field">',0,pos)
-              end=s.index('</div>',s.index('</select>',pos))+6
-              s=s[:start]+'''<div class="field">\n                            <label>\n                                Trouxe armamento?\n                            </label>\n                            <select class="select" name="external_armament_${{i}}">\n                                <option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>\n                            </select>\n                        </div>'''+s[end:]
+          s, n = re.subn(r"participant_eligible = request\.form\.get\(\s*f'external_eligible_\{i\}',\s*'0'\s*\) == '1'", "brought_armament = request.form.get(\n                f'external_armament_{i}',\n                'NAO'\n            ).upper() == 'SIM'", s, count=1)
+          if n != 1: raise SystemExit('external parsing pattern not found')
+          s, n = re.subn(r"participant_eligible\s*\n\s*\)\s*\n\s*\)\s*\n\s*if not participants", "brought_armament\n                )\n            )\n\n        if not participants", s, count=1)
+          if n != 1: raise SystemExit('external tuple pattern not found')
 
-          # Show yes/no in member history and action result.
-          s=s.replace("""            ap.value_received,\n            a.name action_name\n""", """            ap.value_received,\n            ap.weapon armament,\n            a.name action_name\n""", 1)
-          s=s.replace("""<td>{money(r['value_received'])}</td>\n            <td>{r['created_at'][:16].replace('T',' ')}</td>""", """<td>{money(r['value_received'])}</td>\n            <td>{'Sim' if r['armament'] == 'SIM' else 'Não'}</td>\n            <td>{r['created_at'][:16].replace('T',' ')}</td>""", 1)
-          s=s.replace('<th>Recebeu</th>\n            <th>Data</th>', '<th>Recebeu</th>\n            <th>Armamento</th>\n            <th>Data</th>', 1)
-          s=s.replace("""<td>{money(p[\"value_received\"])}</td>\n            <td>{p[\"reason\"] or \"—\"}</td>""", """<td>{money(p[\"value_received\"])}</td>\n            <td>{'Sim' if p['weapon'] == 'SIM' else 'Não'}</td>\n            <td>{p[\"reason\"] or \"—\"}</td>""", 1)
-          s=s.replace('<th>Recebeu</th>\n                <th>Observação</th>', '<th>Recebeu</th>\n                <th>Armamento</th>\n                <th>Observação</th>', 1)
-          s=s.replace('colspan="5" class="muted">Nenhum participante registrado.', 'colspan="6" class="muted">Nenhum participante registrado.', 1)
+          s, n = re.subn(r"eligible = \[\s*x\s*for x in participants\s*if x\[4\] and result_status == 'GANHADA'\s*\]", "eligible = participants if result_status == 'GANHADA' else []", s, count=1)
+          if n != 1: raise SystemExit('eligible list pattern not found')
+          s = s.replace('for typ, mid, ext, side, participant_eligible in participants:', 'for typ, mid, ext, side, brought_armament in participants:', 1)
+          s = s.replace('ok = bool(participant_eligible) and result_status == \'GANHADA\'', "ok = result_status == 'GANHADA'", 1)
+          s = s.replace("'Não elegível para a divisão',", "'Ação perdida',", 1)
+          s, n = re.subn(r"side,\s*''\s*,\s*int\(ok\),", "side,\n                        'SIM' if brought_armament else 'NAO',\n                        int(ok),", s, count=1)
+          if n != 1: raise SystemExit('database weapon pattern not found')
 
-          if 'data-eligible' in s or 'external_eligible_' in s or 'participant_eligible' in s:
-              raise SystemExit('old eligibility field remains')
-          if 'data-armament' not in s or 'external_armament_' not in s:
-              raise SystemExit('armament field missing')
-          p.write_text(s,encoding='utf-8')
+          # Replace member selector field and JS.
+          old_member = re.search(r'<div class="field">\s*<label>\s*Participa da divisão\?\s*</label>.*?</div>', s, re.S)
+          if not old_member:
+              old_member = re.search(r'<div class="field">\s*<label>\s*Participação na divisão\s*</label>.*?</div>', s, re.S)
+          if old_member:
+              new = '''<div class="field">\n                            <label>\n                                Trouxe armamento?\n                            </label>\n                            <select class="select" data-armament>\n                                <option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>\n                            </select>\n                        </div>'''
+              s = s[:old_member.start()] + new + s[old_member.end():]
+
+          s = re.sub(r"let eligible =\s*r\.querySelector\(\s*'\[data-eligible\]'\s*\);\s*eligible\.name =\s*'eligible_' \+ s\.value;", "let armament = r.querySelector('[data-armament]');\n\n        armament.name = 'armament_' + s.value;", s, count=1)
+
+          # External participant field.
+          s = re.sub(r'<div class="field">\s*<label>\s*Participa da divisão\?\s*</label>.*?name="external_eligible_\$\{i\}".*?</div>', '''<div class="field">\n                            <label>\n                                Trouxe armamento?\n                            </label>\n                            <select class="select" name="external_armament_${i}">\n                                <option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>\n                            </select>\n                        </div>''', s, count=1, flags=re.S)
+
+          # History/result tables.
+          if 'ap.weapon armament' not in s:
+              s = s.replace('ap.value_received,\n            a.name action_name', 'ap.value_received,\n            ap.weapon armament,\n            a.name action_name', 1)
+          s = s.replace("<td>{money(r['value_received'])}</td>\n            <td>{r['created_at'][:16].replace('T',' ')}</td>", "<td>{money(r['value_received'])}</td>\n            <td>{'Sim' if r['armament'] == 'SIM' else 'Não'}</td>\n            <td>{r['created_at'][:16].replace('T',' ')}</td>", 1)
+          s = s.replace('<th>Recebeu</th>\n            <th>Data</th>', '<th>Recebeu</th>\n            <th>Armamento</th>\n            <th>Data</th>', 1)
+          s = s.replace("<td>{money(p[\"value_received\"])}</td>\n            <td>{p[\"reason\"] or \"—\"}</td>", "<td>{money(p[\"value_received\"])}</td>\n            <td>{'Sim' if p['weapon'] == 'SIM' else 'Não'}</td>\n            <td>{p[\"reason\"] or \"—\"}</td>", 1)
+          s = s.replace('<th>Recebeu</th>\n                <th>Observação</th>', '<th>Recebeu</th>\n                <th>Armamento</th>\n                <th>Observação</th>', 1)
+
+          if any(x in s for x in ('data-eligible', 'external_eligible_', 'participant_eligible', 'eligible_')):
+              raise SystemExit('old eligibility references remain')
+          if 'data-armament' not in s or 'external_armament_' not in s or 'brought_armament' not in s:
+              raise SystemExit('armament tracking incomplete')
+
+          p.write_text(s, encoding='utf-8')
+          print('changed:', s != original, 'bytes:', len(s.encode()))
           PY
           python3 -m py_compile central_lastro.py
       - name: Commit
@@ -65,5 +76,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add central_lastro.py
-          git diff --cached --quiet || git commit -m 'Implement armament tracking'
+          git diff --cached --quiet || git commit -m 'Replace division eligibility with armament tracking'
           git push
