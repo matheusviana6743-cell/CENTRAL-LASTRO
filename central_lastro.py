@@ -1123,8 +1123,6 @@ IC = {
 def shell(title, body):
 
     items = [('Painel','dashboard'),('Farm','farms'),('Produção','productions'),('Baú','chests'),('Ações','actions'),('Ranking','ranking'),('Hierarquia','members'),('Histórico','history')]
-    if session.get('role') == 'ADMINISTRADOR':
-        items.append(('Usuários','users'))
     nav=''.join(f'<a href="{url_for(route)}"><span class="navicon">{IC[name]}</span><span>{name}</span></a>' for name,route in items)
     messages=''.join(f'''<div class="flash {"error" if kind=="error" else ""}">{msg}</div>''' for kind,msg in session.pop('_flashes',[]))
     current=getall('''SELECT u.name,u.role,u.passport,u.avatar,m.passport member_passport FROM users u LEFT JOIN members m ON lower(m.name)=lower(u.name) WHERE u.id=?''',(session.get('uid'),))
@@ -1412,8 +1410,8 @@ def dashboard():
 
     top = getall("SELECT m.id,m.name,m.cargo,COUNT(ap.id) qty,COALESCE(SUM(CASE WHEN ar.result_status='GANHA' THEN ap.value_received ELSE 0 END),0) received FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id LEFT JOIN action_records ar ON ar.id=ap.record_id WHERE m.active=1 GROUP BY m.id ORDER BY qty DESC,received DESC,m.name LIMIT 5")
     top_rows = ''.join(
-        '<tr><td><a href=\"{}\">{}</a></td><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
-            url_for('member_profile', member_id=m['id']), m['name'], m['cargo'], m['qty'], money(m['received'])
+        '<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
+            m['name'], m['cargo'], m['qty'], money(m['received'])
         ) for m in top
     ) or '<tr><td colspan=\"4\" class=\"muted\">Ainda não há participações.</td></tr>'
 
@@ -3510,9 +3508,7 @@ def users():
 
             <td>{u["username"]}</td>
 
-            <td>{"Elite" if str(u["role"]).upper()=="ELITE.AI" else u["role"]}</td>
-
-            <td>{u["passport"] or "—"}</td>
+            <td>{u["role"]}</td>
 
             <td>
                 {"Ativo" if u["active"] else "Inativo"}
@@ -3554,7 +3550,6 @@ def users():
                     <th>Nome</th>
                     <th>Usuário</th>
                     <th>Perfil</th>
-                    <th>Passaporte</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
@@ -3902,11 +3897,7 @@ def user_edit(user_id):
                         class="input"
                         type="password"
                         name="password"
-                        minlength="8"
-                        placeholder="Deixe vazio para manter a atual"
                     >
-
-                    <small class="muted" style="display:block;margin-top:6px">A senha antiga não é exibida. Digite uma nova senha para redefinir o acesso.</small>
 
                 </div>
 
