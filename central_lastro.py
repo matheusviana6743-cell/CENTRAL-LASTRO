@@ -2742,8 +2742,8 @@ def action_detail(action_id):
                                 data-armament
                             >
 
-                                <option value="0">Não elegível</option>
-                                <option value="1">Elegível</option>
+                                <option value="NAO">Não</option>
+                                <option value="SIM">Sim</option>
 
                             </select>
 
@@ -2853,8 +2853,8 @@ def action_detail(action_id):
                                 name="external_armament_${{i}}"
                             >
 
-                                <option value="0">Não elegível</option>
-                                <option value="1">Elegível</option>
+                                <option value="NAO">Não</option>
+                                <option value="SIM">Sim</option>
 
                             </select>
 
