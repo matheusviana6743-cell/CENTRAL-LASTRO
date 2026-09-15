@@ -2301,10 +2301,10 @@ def action_detail(action_id):
 
         for mid in member_ids:
 
-            participant_eligible = request.form.get(
-                f'eligible_{mid}',
-                '0'
-            ) == '1'
+            brought_armament = request.form.get(
+                f'armament_{mid}',
+                'NAO'
+            ).upper() == 'SIM'
 
 
             participants.append(
@@ -2313,7 +2313,7 @@ def action_detail(action_id):
                     int(mid),
                     None,
                     'BANDIDO',
-                    participant_eligible
+                    brought_armament
                 )
             )
 
@@ -2322,10 +2322,10 @@ def action_detail(action_id):
             if not name.strip():
                 continue
 
-            participant_eligible = request.form.get(
-                f'external_eligible_{i}',
-                '0'
-            ) == '1'
+            brought_armament = request.form.get(
+                f'external_armament_{i}',
+                'NAO'
+            ).upper() == 'SIM'
 
 
             participants.append(
@@ -2342,7 +2342,7 @@ def action_detail(action_id):
                         else ''
                     ),
                     'BANDIDO',
-                    participant_eligible
+                    brought_armament
                 )
             )
 
@@ -2441,11 +2441,7 @@ def action_detail(action_id):
             family = round(value * .5, 2) if result_status == 'GANHADA' else 0
             pool = round(value - family, 2) if result_status == 'GANHADA' else 0
 
-            eligible = [
-                x
-                for x in participants
-                if x[4] and result_status == 'GANHADA'
-            ]
+            eligible = participants if result_status == 'GANHADA' else []
 
             cents = int(
                 round(pool * 100)
@@ -2539,7 +2535,7 @@ def action_detail(action_id):
 
             idx = 0
 
-            for typ, mid, ext, side, participant_eligible in participants:
+            for typ, mid, ext, side, brought_armament in participants:
 
                 eid = None
 
@@ -2557,7 +2553,7 @@ def action_detail(action_id):
                         ext
                     ).lastrowid
 
-                ok = bool(participant_eligible) and result_status == 'GANHADA'
+                ok = result_status == 'GANHADA'
 
                 amount = (
                     each
@@ -2591,7 +2587,7 @@ def action_detail(action_id):
                         mid,
                         eid,
                         side,
-                        '',
+                        'SIM' if brought_armament else 'NAO',
                         int(ok),
                         amount,
                         ''
@@ -2738,12 +2734,12 @@ def action_detail(action_id):
                         <div class="field">
 
                             <label>
-                                Participação na divisão
+                                Trouxe armamento?
                             </label>
 
                             <select
                                 class="select"
-                                data-eligible
+                                data-armament
                             >
 
                                 <option value="0">Não elegível</option>
@@ -2779,11 +2775,11 @@ def action_detail(action_id):
 
         let eligible =
             r.querySelector(
-                '[data-eligible]'
+                '[data-armament]'
             );
 
         eligible.name =
-            'eligible_' + s.value;
+            'armament_' + s.value;
 
     }}
 
@@ -2849,12 +2845,12 @@ def action_detail(action_id):
                         <div class="field">
 
                             <label>
-                                Participação na divisão
+                                Trouxe armamento?
                             </label>
 
                             <select
                                 class="select"
-                                name="external_eligible_${{i}}"
+                                name="external_armament_${{i}}"
                             >
 
                                 <option value="0">Não elegível</option>
