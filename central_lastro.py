@@ -927,21 +927,28 @@ a{
 }
 
 .tablewrap{
-    overflow:auto
+    overflow:hidden;
+    min-width:0
 }
 
 .table{
     width:100%;
-    min-width:640px;
+    table-layout:fixed;
     border-collapse:collapse
 }
 
 .table th,
 .table td{
-    padding:11px;
+    padding:11px 8px;
     border-bottom:1px solid #2a220f;
     text-align:left;
-    white-space:nowrap
+    white-space:normal;
+    overflow-wrap:anywhere
+}
+
+.table th:first-child,
+.table td:first-child{
+    padding-left:10px
 }
 
 .table th{
@@ -983,6 +990,10 @@ a{
     font-size:10px;
     text-transform:uppercase;
     margin-bottom:5px
+}
+
+.table a{
+    overflow-wrap:anywhere
 }
 
 .membercard{
@@ -1068,6 +1079,16 @@ a{
 }
 
 @media(max-width:720px){
+
+    .table{
+        table-layout:auto;
+        font-size:12px
+    }
+
+    .table th,
+    .table td{
+        padding:9px 6px
+    }
 
     .side{
         position:static;
