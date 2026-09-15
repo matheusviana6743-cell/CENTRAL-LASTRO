@@ -1413,7 +1413,7 @@ def dashboard():
     top = getall("SELECT m.id,m.name,m.cargo,COUNT(ap.id) qty,COALESCE(SUM(CASE WHEN ar.result_status='GANHA' THEN ap.value_received ELSE 0 END),0) received FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id LEFT JOIN action_records ar ON ar.id=ap.record_id WHERE m.active=1 GROUP BY m.id ORDER BY qty DESC,received DESC,m.name LIMIT 5")
     top_rows = ''.join(
         '<tr><td><a href=\"{}\">{}</a></td><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
-            url_for('member_profile', member_id=m['id']), m['name'], m['cargo'], m['qty'], money(m['received'])
+            url_for('members'), m['name'], m['cargo'], m['qty'], money(m['received'])
         ) for m in top
     ) or '<tr><td colspan=\"4\" class=\"muted\">Ainda não há participações.</td></tr>'
 
