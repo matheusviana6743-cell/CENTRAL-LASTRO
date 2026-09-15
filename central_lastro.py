@@ -1387,21 +1387,111 @@ def avatar_file(user_id):
 @app.get('/dashboard')
 @auth
 def dashboard():
-    ws=monday().isoformat(); we=(monday()+timedelta(days=6)).isoformat()
-    week_total=getall('SELECT COALESCE(SUM(action_value),0) v FROM action_records WHERE week_start=?',(ws,))[0]['v']
-    family_total=getall("SELECT COALESCE(SUM(family_value),0) v FROM action_records WHERE week_start=? AND result_status='GANHA'",(ws,))[0]['v']
-    member_total=getall("SELECT COALESCE(SUM(participant_pool),0) v FROM action_records WHERE week_start=? AND result_status='GANHA'",(ws,))[0]['v']
-    actions_count=getall('SELECT COUNT(*) n FROM action_records WHERE week_start=?',(ws,))[0]['n']
-    wins=getall("SELECT COUNT(*) n FROM action_records WHERE week_start=? AND result_status='GANHA'",(ws,))[0]['n']
-    losses=getall("SELECT COUNT(*) n FROM action_records WHERE week_start=? AND result_status='PERDIDA'",(ws,))[0]['n']
-    participants=getall('''SELECT COUNT(DISTINCT ap.member_id) n FROM action_participants ap JOIN action_records ar ON ar.id=ap.record_id WHERE ar.week_start=? AND ap.member_id IS NOT NULL''',(ws,))[0]['n']
-    farm_week=getall('SELECT COALESCE(SUM(quantity),0) v FROM farms WHERE date(created_at) BETWEEN date(?) AND date(?)',(ws,we))[0]['v']
-    members_count=getall('SELECT COUNT(*) n FROM members WHERE active=1')[0]['n']
-    top_member=getall('''SELECT m.name,COUNT(ap.id) qty FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id LEFT JOIN action_records ar ON ar.id=ap.record_id AND ar.result_status='GANHA' WHERE m.active=1 GROUP BY m.id ORDER BY qty DESC,m.name LIMIT 1''')
-    top_name=top_member[0]['name'] if top_member and top_member[0]['qty'] else 'Ainda sem destaque'
-    info=[('Movimentado na semana',money(week_total),'Ações registradas nesta semana'),('Parte da família',money(family_total),'50% das ações ganhas'),('Distribuído aos membros',money(member_total),'Pool dos participantes'),('Ações realizadas',actions_count,'Total registrado na semana'),('Ações ganhas',wins,'Resultado positivo'),('Ações perdidas',losses,'Resultado negativo'),('Participantes',participants,'Membros que participaram'),('Farm na semana',f'{farm_week:g}','Quantidade registrada no período'),('Membros ativos',members_count,'Base atual da hierarquia'),('Membro destaque',top_name,'Mais participações em ações')]
-    panels=''.join(f'''<div class="card"><div class="label">{label}</div><div class="metric" style="font-size:{'19px' if label=='Membro destaque' else '27px'}">{value}</div><p class="muted">{desc}</p></div>''' for label,value,desc in info)
-    return shell('Painel',f'''<div class="grid">{panels}</div>''')
+    ws = monday().isoformat()
+
+    week_total = getall("SELECT COALESCE(SUM(action_value),0) v FROM action_records WHERE week_start=? AND result_status='GANHA'", (ws,))[0]['v']
+    family_total = getall("SELECT COALESCE(SUM(family_value),0) v FROM action_records WHERE week_start=? AND result_status='GANHA'", (ws,))[0]['v']
+    member_total = getall("SELECT COALESCE(SUM(participant_pool),0) v FROM action_records WHERE week_start=? AND result_status='GANHA'", (ws,))[0]['v']
+    actions_count = getall("SELECT COUNT(*) n FROM action_records WHERE week_start=?", (ws,))[0]['n']
+    wins = getall("SELECT COUNT(*) n FROM action_records WHERE week_start=? AND result_status='GANHA'", (ws,))[0]['n']
+    losses = getall("SELECT COUNT(*) n FROM action_records WHERE week_start=? AND result_status='PERDIDA'", (ws,))[0]['n']
+    participants = getall("SELECT COUNT(DISTINCT ap.member_id) n FROM action_participants ap JOIN action_records ar ON ar.id=ap.record_id WHERE ar.week_start=? AND ap.member_id IS NOT NULL", (ws,))[0]['n']
+    farm_week = getall("SELECT COALESCE(SUM(quantity),0) v FROM farms WHERE date(created_at)>=date(?) AND date(created_at)<=date(?, '+6 day')", (ws, ws))[0]['v']
+    members_count = getall('SELECT COUNT(*) n FROM members WHERE active=1')[0]['n']
+
+    recent = getall("SELECT ar.id,ar.created_at,ar.action_value,ar.result_status,a.name FROM action_records ar JOIN actions a ON a.id=ar.action_id ORDER BY ar.id DESC LIMIT 8")
+    recent_rows = ''.join(
+        '<tr><td>{}</td><td>{}</td><td>{}</td><td><span class=\"status-badge {}\">{}</span></td><td><a href=\"{}\">Ver</a></td></tr>'.format(
+            r['name'], r['created_at'][:10], money(r['action_value']),
+            'status-win' if r['result_status']=='GANHA' else 'status-loss',
+            r['result_status'], url_for('result', record_id=r['id'])
+        ) for r in recent
+    ) or '<tr><td colspan=\"5\" class=\"muted\">Nenhuma ação registrada ainda.</td></tr>'
+
+    top = getall("SELECT m.id,m.name,m.cargo,COUNT(ap.id) qty,COALESCE(SUM(CASE WHEN ar.result_status='GANHA' THEN ap.value_received ELSE 0 END),0) received FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id LEFT JOIN action_records ar ON ar.id=ap.record_id WHERE m.active=1 GROUP BY m.id ORDER BY qty DESC,received DESC,m.name LIMIT 5")
+    top_rows = ''.join(
+        '<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
+            m['name'], m['cargo'], m['qty'], money(m['received'])
+        ) for m in top
+    ) or '<tr><td colspan=\"4\" class=\"muted\">Ainda não há participações.</td></tr>'
+
+    total_results = wins + losses
+    win_pct = round(wins * 100 / total_results) if total_results else 0
+    loss_pct = round(losses * 100 / total_results) if total_results else 0
+
+    cards = ''.join(
+        '<div class=\"card\"><div class=\"label\">{}</div><div class=\"metric\">{}</div><div class=\"muted\" style=\"margin-top:6px;font-size:12px\">{}</div></div>'.format(label,value,desc)
+        for label,value,desc in [
+            ('Movimentado · semana', money(week_total), 'Ações ganhas registradas nesta semana'),
+            ('Parte da família', money(family_total), '50% das ações ganhas'),
+            ('Distribuído aos membros', money(member_total), '50% das ações ganhas'),
+            ('Ações realizadas', actions_count, 'Total registrado na semana')
+        ]
+    )
+
+    return shell('Painel', f'''
+        <div class=\"card\">
+            <div style=\"display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap\">
+                <div>
+                    <div class=\"label\">PAINEL PRINCIPAL</div>
+                    <h1 style=\"margin:4px 0\">Central de Inteligência</h1>
+                    <p class=\"muted\" style=\"margin:0\">Dashboard da Empresa Lastro · semana iniciada em {ws}</p>
+                </div>
+                <span class=\"pill\">ATUALIZADO AUTOMATICAMENTE</span>
+            </div>
+        </div>
+
+        <div class=\"grid section\">{cards}</div>
+
+        <div class=\"cards3 section\">
+            <div class=\"card\">
+                <div class=\"label\">RESULTADO DA SEMANA</div>
+                <div style=\"font-size:28px;font-weight:800;margin:8px 0\">{wins} ganhada(s)</div>
+                <div class=\"muted\">{losses} perdida(s) · {actions_count} registrada(s)</div>
+                <div style=\"height:12px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:16px\">
+                    <div style=\"width:{win_pct}%;height:100%;background:#d6b25e;transition:width .35s ease\"></div>
+                </div>
+                <div style=\"display:flex;justify-content:space-between;margin-top:8px;font-size:12px\">
+                    <span>Ganhas {win_pct}%</span>
+                    <span>Perdidas {loss_pct}%</span>
+                </div>
+            </div>
+
+            <div class=\"card\">
+                <div class=\"label\">DIVISÃO FINANCEIRA</div>
+                <div style=\"font-size:26px;font-weight:800;margin-top:12px\">50% / 50%</div>
+                <div class=\"muted\" style=\"margin-top:8px\">Família: {money(family_total)}</div>
+                <div class=\"muted\">Membros: {money(member_total)}</div>
+            </div>
+
+            <div class=\"card\">
+                <div class=\"label\">INDICADORES</div>
+                <div style=\"margin-top:12px;line-height:1.9\">
+                    Membros ativos: {members_count}<br>
+                    Participantes na semana: {participants}<br>
+                    Farm na semana: {farm_week:g}<br>
+                    Movimentado na semana: {money(week_total)}
+                </div>
+            </div>
+        </div>
+
+        <div class=\"cards3 section\">
+            <div class=\"card tablewrap\">
+                <h2>Atividade recente</h2>
+                <table class=\"table\">
+                    <tr><th>Ação</th><th>Data</th><th>Valor</th><th>Resultado</th><th></th></tr>
+                    {recent_rows}
+                </table>
+            </div>
+            <div class=\"card tablewrap\">
+                <h2>Destaques dos membros</h2>
+                <table class=\"table\">
+                    <tr><th>Membro</th><th>Cargo</th><th>Participações</th><th>Recebido</th></tr>
+                    {top_rows}
+                </table>
+            </div>
+        </div>
+    ''')
 
 
 # ============================================================
