@@ -13,47 +13,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply armament tracking
+      - name: Restore known-good source and apply dashboard/profile
+        env:
+          DASHBOARD_B64: QGFwcC5nZXQoJy9kYXNoYm9hcmQnKQpAYXV0aApkZWYgZGFzaGJvYXJkKCk6CgogICAgd3MgPSBtb25kYXkoKS5pc29mb3JtYXQoKQoKICAgIHRvdGFscyA9IGdldGFsbCgKICAgICAgICAnJycKICAgICAgICBTRUxFQ1QKICAgICAgICAgICAgQ09BTEVTQ0UoU1VNKENBU0UgV0hFTiBzdGF0dXM9J0dBTkhBREEnIFRIRU4gYWN0aW9uX3ZhbHVlIEVMU0UgMCBFTkQpLDApIHRvdGFsLAogICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nR0FOSEFEQScgVEhFTiBmYW1pbHlfdmFsdWUgRUxTRSAwIEVORCksMCkgZmFtaWx5X3RvdGFsLAogICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nR0FOSEFEQScgVEhFTiBwYXJ0aWNpcGFudF9wb29sIEVMU0UgMCBFTkQpLDApIHBhcnRpY2lwYW50X3RvdGFsLAogICAgICAgICAgICBDT1VOVCgqKSB0b3RhbF9hY3Rpb25zLAogICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nR0FOSEFEQScgVEhFTiAxIEVMU0UgMCBFTkQpLDApIHdvbl9hY3Rpb25zLAogICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nUEVSRElEQScgVEhFTiAxIEVMU0UgMCBFTkQpLDApIGxvc3RfYWN0aW9ucwogICAgICAgIEZST00gYWN0aW9uX3JlY29yZHMKICAgICAgICAnJycKICAgICkW0F0Cg==
+          PROFILE_B64: IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KIyBQRVJGSUwgRE8gTUVNQlJPCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpAYXBwLmdldCgnL21lbWJlcnMvPGludDptZW1iZXJfaWQ+JykKQGF1dGgKZGVmIG1lbWJlcl9wcm9maWxlKG1lbWJlcl9pZCk6CiAgICByb3dzID0gZ2V0YWxsKCcnJ1NFTEVDVCAqIEZST00gbWVtYmVycyBXSEVSRSBpZD0/IEFORCBhY3RpdmU9MScnJywgKG1lbWJlcl9pZCwpKQogICAgaWYgbm90IHJvd3M6CiAgICAgICAgYWJvcnQoNDA0KQogICAgbSA9IHJvd3NbMF0KCiAgICBzdGF0cyA9IGdldGFsbCgKICAgICAgICAnJycKICAgICAgICBTRUxFQ1QgQ09VTlQoYXAuaWQpIHBhcnRpY2lwYXRpb25zLAogICAgICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIGFyLnN0YXR1cz0nR0FOSEFEQScgVEhFTiAxIEVMU0UgMCBFTkQpLDApIHdvbiwKICAgICAgICAgICAgICAgQ09BTEVTQ0UoU1VNKENBU0UgV0hFTiBhci5zdGF0dXM9J1BFUkRJREEnIFRIRU4gMSBFTFNFIDAgRU5EKSwwKSBsb3N0LAogICAgICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nR0FOSEFEQScgVEhFTiBhcC52YWx1ZV9yZWNlaXZlZCBFTFNFIDAgRU5EKSwwKSByZWNlaXZlZCwKICAgICAgICAgICAgICAgKFNFTEVDVCBDT0FMRVNDRShTVU0ocXVhbnRpdHkpLDApIEZST00gZmFybXMgV0hFUkUgbWVtYmVyX2lkPW0uaWQpIGZhcm1fcXR5CiAgICAgICAgRlJPTSBtZW1iZXJzIG0KICAgICAgICBMRUZUIEpPSU4gYWN0aW9uX3BhcnRpY2lwYW50cyBhcCBPTiBhcC5tZW1iZXJfaWQ9bS5pZAogICAgICAgIExFRlQgSk9JTiBhY3Rpb25fcmVjb3JkcyBhciBPTiBhci5pZD1hcC5yZWNvcmRfaWQKICAgICAgICBXSEVSRSBtLmlkPT8gR1JPVVAgQlkgbS5pZAogICAgICAgICcnJywKICAgICAgICAobWVtYmVyX2lkLCkKICAgIClbMF0KCiAgICBoaXN0b3J5ID0gZ2V0YWxsKAogICAgICAgICcnJwogICAgICAgIFNFTEVDVCBhci5pZCxhci5jcmVhdGVkX2F0LGFyLnN0YXR1cyxhcC52YWx1ZV9yZWNlaXZlZCxhcC53ZWFwb24sYS5uYW1lIGFjdGlvbl9uYW1lCiAgICAgICAgRlJPTSBhY3Rpb25fcGFydGljaXBhbnRzIGFwCiAgICAgICAgSk9JTiBhY3Rpb25fcmVjb3JkcyBhciBPTiBhci5pZD1hcC5yZWNvcmRfaWQKICAgICAgICBKT0lOIGFjdGlvbnMgYSBPTiBhLmlkPWFyLmFjdGlvbl9pZAogICAgICAgIFdIRVJFIGFwLm1lbWJlcl9pZD0/IE9SREVSIEJZIGFyLmlkIERFU0MgTElNSVQgMTAwCiAgICAgICAgJycnLAogICAgICAgIChtZW1iZXJfaWQsKQogICAgKQogICAgaGlzdG9yeV9yb3dzID0gJycuam9pbigKICAgICAgICBmJycnCiAgICAgICAgPHRyPjx0ZD57aFsnYWN0aW9uX25hbWUnXX08L3RkPjx0ZD57aFsnY3JlYXRlZF9hdCddWzoxMF19PC90ZD48dGQ+PHNwYW4gY2xhc3M9InBpbGwiPntoWydzdGF0dXMnXX08L3NwYW4+PC90ZD4KICAgICAgICA8dGQ+e21vbmV5KGhbJ3ZhbHVlX3JlY2VpdmVkJ10pIGlmIGhbJ3N0YXR1cyddPT0nR0FOSEFEQScgZWxzZSAnUiQgMCwwMCd9PC90ZD4KICAgICAgICA8dGQ+eydTaW0nIGlmIGhbJ3dlYXBvbiddPT0nU0lNJyBlbHNlICdOw6NvJ308L3RkPjx0ZD48YSBocmVmPSJ7dXJsX2ZvcigncmVzdWx0JywgcmVjb3JkX2lkPWhbJ2lkJ10pfSI+VmVyIGHDp8OjbzwvYT48L3RkPjwvdHI+CiAgICAgICAgJycnIGZvciBoIGluIGhpc3RvcnkKICAgICkgb3IgJzx0cj48dGQgY29sc3Bhbj0iNiIgY2xhc3M9Im11dGVkIj5OZW5odW1hIHBhcnRpY2lwYcOnw6NvIHJlZ2lzdHJhZGEuPC90ZD48L3RyPicKCiAgICByZXR1cm4gc2hlbGwoCiAgICAgICAgJ1BlcmZpbCDCtyAnICsgbVsnbmFtZSddLAogICAgICAgIGYnJycKICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIj48ZGl2IHN0eWxlPSJkaXNwbGF5OmZsZXg7anVzdGlmeS1jb250ZW50OnNwYWNlLWJldHdlZW47Z2FwOjE2cHg7YWxpZ24taXRlbXM6Y2VudGVyO2ZsZXgtd3JhcDp3cmFwIj4KICAgICAgICAgICAgPGRpdj48ZGl2IGNsYXNzPSJsYWJlbCI+UEVSRklMIERPIE1FTUJSTzwvZGl2PjxoMSBzdHlsZT0ibWFyZ2luOjRweCAwIj57bVsnbmFtZSddfTwvaDE+CiAgICAgICAgICAgIDxwIGNsYXNzPSJtdXRlZCIgc3R5bGU9Im1hcmdpbjowIj5QYXNzYXBvcnRlOiB7bVsncGFzc3BvcnQnXSBvciAn4oCUJ30gwrcge21bJ2NhcmdvJ119PC9wPjwvZGl2PgogICAgICAgICAgICA8YSBjbGFzcz0iYnRuIHNlY29uZGFyeSIgaHJlZj0ie3VybF9mb3IoJ21lbWJlcnMnKX0iPlZvbHRhciBwYXJhIG1lbWJyb3M8L2E+CiAgICAgICAgPC9kaXY+PC9kaXY+CgogICAgICAgIDxkaXYgY2xhc3M9ImdyaWQgc2VjdGlvbiI+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9ImNhcmQiPjxkaXYgY2xhc3M9ImxhYmVsIj5QQVJUSUNJUEHDh8OVRVM8L2Rpdj48ZGl2IGNsYXNzPSJtZXRyaWMiPntzdGF0c1sncGFydGljaXBhdGlvbnMnXX08L2Rpdj48L2Rpdj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+PGRpdiBjbGFzcz0ibGFiZWwiPkdBTkhBREFTPC9kaXY+PGRpdiBjbGFzcz0ibWV0cmljIj57c3RhdHNbJ3dvbiddfTwvZGl2PjwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIj48ZGl2IGNsYXNzPSJsYWJlbCI+UEVSRElEQVM8L2Rpdj48ZGl2IGNsYXNzPSJtZXRyaWMiPntzdGF0c1snbG9zdCddfTwvZGl2PjwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIj48ZGl2IGNsYXNzPSJsYWJlbCI+VE9UQUwgUkVDRUJJRE88L2Rpdj48ZGl2IGNsYXNzPSJtZXRyaWMiPnttb25leShzdGF0c1sncmVjZWl2ZWQnXSl9PC9kaXY+PC9kaXY+CiAgICAgICAgPC9kaXY+CgogICAgICAgIDxkaXYgY2xhc3M9ImNhcmRzMyBzZWN0aW9uIj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+PGRpdiBjbGFzcz0ibGFiZWwiPkZBUk0gUkVHSVNUUkFETzwvZGl2PjxkaXYgY2xhc3M9Im1ldHJpYyI+e3N0YXRzWydmYXJtX3F0eSddOmd9PC9kaXY+PC9kaXY+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9ImNhcmQiPjxkaXYgY2xhc3M9ImxhYmVsIj5BUk1BTUVOVE8gUkVHSVNUUkFETzwvZGl2PjxkaXYgc3R5bGU9ImZvbnQtc2l6ZToyMnB4O2ZvbnQtd2VpZ2h0OjgwMDttYXJnaW4tdG9wOjhweCI+Tm8gaGlzdMOzcmljbzwvZGl2PjxkaXYgY2xhc3M9Im11dGVkIiBzdHlsZT0ibWFyZ2luLXRvcDo2cHgiPkNhZGEgcGFydGljaXBhw6fDo28gbW9zdHJhIFNpbS9Ow6NvLjwvZGl2PjwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIj48ZGl2IGNsYXNzPSJsYWJlbCI+T0JTRVJWQcOHw5VFUzwvZGl2PjxkaXYgY2xhc3M9Im11dGVkIiBzdHlsZT0ibWFyZ2luLXRvcDoxMHB4Ij57bVsnbm90ZXMnXSBvciAnTmVuaHVtYSBvYnNlcnZhw6fDo28gY2FkYXN0cmFkYS4nfTwvZGl2PjwvZGl2PgogICAgICAgIDwvZGl2PgoKICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIHNlY3Rpb24gdGFibGV3cmFwIj48aDI+SGlzdMOzcmljbyBkZSBhw6fDtWVzPC9oMj4KICAgICAgICAgICAgPHRhYmxlIGNsYXNzPSJ0YWJsZSI+PHRyPjx0aD5Bw6fDo288L3RoPjx0aD5EYXRhPC90aD48dGg+UmVzdWx0YWRvPC90aD48dGg+UmVjZWJpZG88L3RoPjx0aD5Bcm1hbWVudG88L3RoPjx0aD48L3RoPjwvdHI+e2hpc3Rvcnlfcm93c308L3RhYmxlPgogICAgICAgIDwvZGl2PgogICAgICAgICcnJwogICAgKQoK
         run: |
+          git show 35d694917a533fba9a5580aabca727d5f9a24c36:central_lastro.py > central_lastro.py
           python3 - <<'PY'
           from pathlib import Path
-          import re
-
-          p = Path('central_lastro.py')
-          s = p.read_text(encoding='utf-8')
-
-          s = s.replace("participant_eligible = request.form.get(\n                f'eligible_{mid}',\n                '0'\n            ) == '1'", "brought_armament = request.form.get(\n                f'armament_{mid}',\n                'NAO'\n            ).upper() == 'SIM'", 1)
-          s = s.replace("participant_eligible = request.form.get(\n                f'external_eligible_{i}',\n                '0'\n            ) == '1'", "brought_armament = request.form.get(\n                f'external_armament_{i}',\n                'NAO'\n            ).upper() == 'SIM'", 1)
-          s = s.replace('participant_eligible', 'brought_armament')
-
-          s = re.sub(r"eligible = \[\s*x\s*for x in participants\s*if x\[4\] and result_status == 'GANHADA'\s*\]", "eligible = participants if result_status == 'GANHADA' else []", s, count=1)
-          s = s.replace("ok = bool(brought_armament) and result_status == 'GANHADA'", "ok = result_status == 'GANHADA'")
-          s = s.replace("'Não elegível para a divisão',", "'Ação perdida',")
-          s = re.sub(r"side,\s*''\s*,\s*int\(ok\),", "side,\n                        'SIM' if brought_armament else 'NAO',\n                        int(ok),", s, count=1)
-
-          # Member and external selectors.
-          s = s.replace('data-eligible', 'data-armament')
-          s = s.replace("let eligible = r.querySelector('[data-armament]');", "let armament = r.querySelector('[data-armament]');")
-          s = s.replace("eligible.name = 'eligible_' + s.value;", "armament.name = 'armament_' + s.value;")
-          s = s.replace("'eligible_' + s.value", "'armament_' + s.value")
-          s = s.replace('external_eligible_', 'external_armament_')
-          s = re.sub(r'Participa da divisão\?', 'Trouxe armamento?', s)
-          s = re.sub(r'Participação na divisão', 'Trouxe armamento?', s)
-          s = s.replace('<option value="0">Não elegível</option>\n                                <option value="1">Elegível</option>', '<option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>')
-          s = s.replace('<option value="0">Não</option>\n                                <option value="1">Sim</option>', '<option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>')
-
-          # Persist/display armament flag in history/result tables.
-          if 'ap.weapon armament' not in s:
-              s = s.replace('ap.value_received,\n            a.name action_name', 'ap.value_received,\n            ap.weapon armament,\n            a.name action_name', 1)
-          s = s.replace("<td>{money(r['value_received'])}</td>\n            <td>{r['created_at'][:16].replace('T',' ')}</td>", "<td>{money(r['value_received'])}</td>\n            <td>{'Sim' if r['armament'] == 'SIM' else 'Não'}</td>\n            <td>{r['created_at'][:16].replace('T',' ')}</td>", 1)
-          s = s.replace('<th>Recebeu</th>\n            <th>Data</th>', '<th>Recebeu</th>\n            <th>Armamento</th>\n            <th>Data</th>', 1)
-          s = s.replace("<td>{money(p[\"value_received\"])}</td>\n            <td>{p[\"reason\"] or \"—\"}</td>", "<td>{money(p[\"value_received\"])}</td>\n            <td>{'Sim' if p['weapon'] == 'SIM' else 'Não'}</td>\n            <td>{p[\"reason\"] or \"—\"}</td>", 1)
-          s = s.replace('<th>Recebeu</th>\n                <th>Observação</th>', '<th>Recebeu</th>\n                <th>Armamento</th>\n                <th>Observação</th>', 1)
-
-          if 'brought_armament' not in s or 'external_armament_' not in s:
-              raise SystemExit('armament tracking incomplete')
-
-          p.write_text(s, encoding='utf-8')
+          import base64
+          p=Path('central_lastro.py')
+          s=p.read_text(encoding='utf-8')
+          dashboard=base64.b64decode('${DASHBOARD_B64}').decode('utf-8')
+          profile=base64.b64decode('${PROFILE_B64}').decode('utf-8')
+          a=s.index("@app.get('/dashboard')")
+          b=s.index("# ============================================================\n# FARM", a)
+          s=s[:a]+dashboard+s[b:]
+          marker="# ============================================================\n# EDITAR MEMBRO"
+          pos=s.index(marker)
+          s=s[:pos]+profile+s[pos:]
+          old="<td>{m['name']}</td>\n                <td>{m['passport'] or '—'}</td>"
+          new="<td><a href=\"{url_for('member_profile', member_id=m['id'])}\">{m['name']}</a></td>\n                <td>{m['passport'] or '—'}</td>"
+          if old not in s:
+              raise SystemExit('member link patch target not found')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
           PY
           python3 -m py_compile central_lastro.py
       - name: Commit
@@ -61,5 +45,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add central_lastro.py
-          git diff --cached --quiet || git commit -m 'Finalize armament tracking UI'
+          git diff --cached --quiet || git commit -m 'feat: merge dashboard with central intelligence and member profiles'
           git push
