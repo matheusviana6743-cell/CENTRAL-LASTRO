@@ -13,29 +13,75 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore known-good source and apply dashboard/profile
-        env:
-          DASHBOARD_B64: QGFwcC5nZXQoJy9kYXNoYm9hcmQnKQpAYXV0aApkZWYgZGFzaGJvYXJkKCk6CgogICAgd3MgPSBtb25kYXkoKS5pc29mb3JtYXQoKQoKICAgIHRvdGFscyA9IGdldGFsbCgKICAgICAgICAnJycKICAgICAgICBTRUxFQ1QKICAgICAgICAgICAgQ09BTEVTQ0UoU1VNKENBU0UgV0hFTiBzdGF0dXM9J0dBTkhBREEnIFRIRU4gYWN0aW9uX3ZhbHVlIEVMU0UgMCBFTkQpLDApIHRvdGFsLAogICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nR0FOSEFEQScgVEhFTiBmYW1pbHlfdmFsdWUgRUxTRSAwIEVORCksMCkgZmFtaWx5X3RvdGFsLAogICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nR0FOSEFEQScgVEhFTiBwYXJ0aWNpcGFudF9wb29sIEVMU0UgMCBFTkQpLDApIHBhcnRpY2lwYW50X3RvdGFsLAogICAgICAgICAgICBDT1VOVCgqKSB0b3RhbF9hY3Rpb25zLAogICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nR0FOSEFEQScgVEhFTiAxIEVMU0UgMCBFTkQpLDApIHdvbl9hY3Rpb25zLAogICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nUEVSRElEQScgVEhFTiAxIEVMU0UgMCBFTkQpLDApIGxvc3RfYWN0aW9ucwogICAgICAgIEZST00gYWN0aW9uX3JlY29yZHMKICAgICAgICAnJycKICAgICkW0F0Cg==
-          PROFILE_B64: IyA9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0KIyBQRVJGSUwgRE8gTUVNQlJPCiMgPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09CgpAYXBwLmdldCgnL21lbWJlcnMvPGludDptZW1iZXJfaWQ+JykKQGF1dGgKZGVmIG1lbWJlcl9wcm9maWxlKG1lbWJlcl9pZCk6CiAgICByb3dzID0gZ2V0YWxsKCcnJ1NFTEVDVCAqIEZST00gbWVtYmVycyBXSEVSRSBpZD0/IEFORCBhY3RpdmU9MScnJywgKG1lbWJlcl9pZCwpKQogICAgaWYgbm90IHJvd3M6CiAgICAgICAgYWJvcnQoNDA0KQogICAgbSA9IHJvd3NbMF0KCiAgICBzdGF0cyA9IGdldGFsbCgKICAgICAgICAnJycKICAgICAgICBTRUxFQ1QgQ09VTlQoYXAuaWQpIHBhcnRpY2lwYXRpb25zLAogICAgICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIGFyLnN0YXR1cz0nR0FOSEFEQScgVEhFTiAxIEVMU0UgMCBFTkQpLDApIHdvbiwKICAgICAgICAgICAgICAgQ09BTEVTQ0UoU1VNKENBU0UgV0hFTiBhci5zdGF0dXM9J1BFUkRJREEnIFRIRU4gMSBFTFNFIDAgRU5EKSwwKSBsb3N0LAogICAgICAgICAgICAgICBDT0FMRVNDRShTVU0oQ0FTRSBXSEVOIHN0YXR1cz0nR0FOSEFEQScgVEhFTiBhcC52YWx1ZV9yZWNlaXZlZCBFTFNFIDAgRU5EKSwwKSByZWNlaXZlZCwKICAgICAgICAgICAgICAgKFNFTEVDVCBDT0FMRVNDRShTVU0ocXVhbnRpdHkpLDApIEZST00gZmFybXMgV0hFUkUgbWVtYmVyX2lkPW0uaWQpIGZhcm1fcXR5CiAgICAgICAgRlJPTSBtZW1iZXJzIG0KICAgICAgICBMRUZUIEpPSU4gYWN0aW9uX3BhcnRpY2lwYW50cyBhcCBPTiBhcC5tZW1iZXJfaWQ9bS5pZAogICAgICAgIExFRlQgSk9JTiBhY3Rpb25fcmVjb3JkcyBhciBPTiBhci5pZD1hcC5yZWNvcmRfaWQKICAgICAgICBXSEVSRSBtLmlkPT8gR1JPVVAgQlkgbS5pZAogICAgICAgICcnJywKICAgICAgICAobWVtYmVyX2lkLCkKICAgIClbMF0KCiAgICBoaXN0b3J5ID0gZ2V0YWxsKAogICAgICAgICcnJwogICAgICAgIFNFTEVDVCBhci5pZCxhci5jcmVhdGVkX2F0LGFyLnN0YXR1cyxhcC52YWx1ZV9yZWNlaXZlZCxhcC53ZWFwb24sYS5uYW1lIGFjdGlvbl9uYW1lCiAgICAgICAgRlJPTSBhY3Rpb25fcGFydGljaXBhbnRzIGFwCiAgICAgICAgSk9JTiBhY3Rpb25fcmVjb3JkcyBhciBPTiBhci5pZD1hcC5yZWNvcmRfaWQKICAgICAgICBKT0lOIGFjdGlvbnMgYSBPTiBhLmlkPWFyLmFjdGlvbl9pZAogICAgICAgIFdIRVJFIGFwLm1lbWJlcl9pZD0/IE9SREVSIEJZIGFyLmlkIERFU0MgTElNSVQgMTAwCiAgICAgICAgJycnLAogICAgICAgIChtZW1iZXJfaWQsKQogICAgKQogICAgaGlzdG9yeV9yb3dzID0gJycuam9pbigKICAgICAgICBmJycnCiAgICAgICAgPHRyPjx0ZD57aFsnYWN0aW9uX25hbWUnXX08L3RkPjx0ZD57aFsnY3JlYXRlZF9hdCddWzoxMF19PC90ZD48dGQ+PHNwYW4gY2xhc3M9InBpbGwiPntoWydzdGF0dXMnXX08L3NwYW4+PC90ZD4KICAgICAgICA8dGQ+e21vbmV5KGhbJ3ZhbHVlX3JlY2VpdmVkJ10pIGlmIGhbJ3N0YXR1cyddPT0nR0FOSEFEQScgZWxzZSAnUiQgMCwwMCd9PC90ZD4KICAgICAgICA8dGQ+eydTaW0nIGlmIGhbJ3dlYXBvbiddPT0nU0lNJyBlbHNlICdOw6NvJ308L3RkPjx0ZD48YSBocmVmPSJ7dXJsX2ZvcigncmVzdWx0JywgcmVjb3JkX2lkPWhbJ2lkJ10pfSI+VmVyIGHDp8OjbzwvYT48L3RkPjwvdHI+CiAgICAgICAgJycnIGZvciBoIGluIGhpc3RvcnkKICAgICkgb3IgJzx0cj48dGQgY29sc3Bhbj0iNiIgY2xhc3M9Im11dGVkIj5OZW5odW1hIHBhcnRpY2lwYcOnw6NvIHJlZ2lzdHJhZGEuPC90ZD48L3RyPicKCiAgICByZXR1cm4gc2hlbGwoCiAgICAgICAgJ1BlcmZpbCDCtyAnICsgbVsnbmFtZSddLAogICAgICAgIGYnJycKICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIj48ZGl2IHN0eWxlPSJkaXNwbGF5OmZsZXg7anVzdGlmeS1jb250ZW50OnNwYWNlLWJldHdlZW47Z2FwOjE2cHg7YWxpZ24taXRlbXM6Y2VudGVyO2ZsZXgtd3JhcDp3cmFwIj4KICAgICAgICAgICAgPGRpdj48ZGl2IGNsYXNzPSJsYWJlbCI+UEVSRklMIERPIE1FTUJSTzwvZGl2PjxoMSBzdHlsZT0ibWFyZ2luOjRweCAwIj57bVsnbmFtZSddfTwvaDE+CiAgICAgICAgICAgIDxwIGNsYXNzPSJtdXRlZCIgc3R5bGU9Im1hcmdpbjowIj5QYXNzYXBvcnRlOiB7bVsncGFzc3BvcnQnXSBvciAn4oCUJ30gwrcge21bJ2NhcmdvJ119PC9wPjwvZGl2PgogICAgICAgICAgICA8YSBjbGFzcz0iYnRuIHNlY29uZGFyeSIgaHJlZj0ie3VybF9mb3IoJ21lbWJlcnMnKX0iPlZvbHRhciBwYXJhIG1lbWJyb3M8L2E+CiAgICAgICAgPC9kaXY+PC9kaXY+CgogICAgICAgIDxkaXYgY2xhc3M9ImdyaWQgc2VjdGlvbiI+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9ImNhcmQiPjxkaXYgY2xhc3M9ImxhYmVsIj5QQVJUSUNJUEHDh8OVRVM8L2Rpdj48ZGl2IGNsYXNzPSJtZXRyaWMiPntzdGF0c1sncGFydGljaXBhdGlvbnMnXX08L2Rpdj48L2Rpdj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+PGRpdiBjbGFzcz0ibGFiZWwiPkdBTkhBREFTPC9kaXY+PGRpdiBjbGFzcz0ibWV0cmljIj57c3RhdHNbJ3dvbiddfTwvZGl2PjwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIj48ZGl2IGNsYXNzPSJsYWJlbCI+UEVSRElEQVM8L2Rpdj48ZGl2IGNsYXNzPSJtZXRyaWMiPntzdGF0c1snbG9zdCddfTwvZGl2PjwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIj48ZGl2IGNsYXNzPSJsYWJlbCI+VE9UQUwgUkVDRUJJRE88L2Rpdj48ZGl2IGNsYXNzPSJtZXRyaWMiPnttb25leShzdGF0c1sncmVjZWl2ZWQnXSl9PC9kaXY+PC9kaXY+CiAgICAgICAgPC9kaXY+CgogICAgICAgIDxkaXYgY2xhc3M9ImNhcmRzMyBzZWN0aW9uIj4KICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+PGRpdiBjbGFzcz0ibGFiZWwiPkZBUk0gUkVHSVNUUkFETzwvZGl2PjxkaXYgY2xhc3M9Im1ldHJpYyI+e3N0YXRzWydmYXJtX3F0eSddOmd9PC9kaXY+PC9kaXY+CiAgICAgICAgICAgIDxkaXYgY2xhc3M9ImNhcmQiPjxkaXYgY2xhc3M9ImxhYmVsIj5BUk1BTUVOVE8gUkVHSVNUUkFETzwvZGl2PjxkaXYgc3R5bGU9ImZvbnQtc2l6ZToyMnB4O2ZvbnQtd2VpZ2h0OjgwMDttYXJnaW4tdG9wOjhweCI+Tm8gaGlzdMOzcmljbzwvZGl2PjxkaXYgY2xhc3M9Im11dGVkIiBzdHlsZT0ibWFyZ2luLXRvcDo2cHgiPkNhZGEgcGFydGljaXBhw6fDo28gbW9zdHJhIFNpbS9Ow6NvLjwvZGl2PjwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIj48ZGl2IGNsYXNzPSJsYWJlbCI+T0JTRVJWQcOHw5VFUzwvZGl2PjxkaXYgY2xhc3M9Im11dGVkIiBzdHlsZT0ibWFyZ2luLXRvcDoxMHB4Ij57bVsnbm90ZXMnXSBvciAnTmVuaHVtYSBvYnNlcnZhw6fDo28gY2FkYXN0cmFkYS4nfTwvZGl2PjwvZGl2PgogICAgICAgIDwvZGl2PgoKICAgICAgICA8ZGl2IGNsYXNzPSJjYXJkIHNlY3Rpb24gdGFibGV3cmFwIj48aDI+SGlzdMOzcmljbyBkZSBhw6fDtWVzPC9oMj4KICAgICAgICAgICAgPHRhYmxlIGNsYXNzPSJ0YWJsZSI+PHRyPjx0aD5Bw6fDo288L3RoPjx0aD5EYXRhPC90aD48dGg+UmVzdWx0YWRvPC90aD48dGg+UmVjZWJpZG88L3RoPjx0aD5Bcm1hbWVudG88L3RoPjx0aD48L3RoPjwvdHI+e2hpc3Rvcnlfcm93c308L3RhYmxlPgogICAgICAgIDwvZGl2PgogICAgICAgICcnJwogICAgKQoK
+      - name: Restore source and apply intelligence dashboard
         run: |
-          git show 35d694917a533fba9a5580aabca727d5f9a24c36:central_lastro.py > central_lastro.py
+          git fetch --no-tags origin b4dc0bb594fbb63adf35e2f158df9ffc51daf82c
+          git show b4dc0bb594fbb63adf35e2f158df9ffc51daf82c:central_lastro.py > central_lastro.py
           python3 - <<'PY'
           from pathlib import Path
-          import base64
           p=Path('central_lastro.py')
           s=p.read_text(encoding='utf-8')
-          dashboard=base64.b64decode('${DASHBOARD_B64}').decode('utf-8')
-          profile=base64.b64decode('${PROFILE_B64}').decode('utf-8')
-          a=s.index("@app.get('/dashboard')")
-          b=s.index("# ============================================================\n# FARM", a)
-          s=s[:a]+dashboard+s[b:]
-          marker="# ============================================================\n# EDITAR MEMBRO"
-          pos=s.index(marker)
-          s=s[:pos]+profile+s[pos:]
+
+          dashboard=r'''@app.get('/dashboard')
+          @auth
+          def dashboard():
+              ws=monday().isoformat()
+              w=getall('''
+                  SELECT COUNT(*) total,
+                  COALESCE(SUM(CASE WHEN status='GANHADA' THEN 1 ELSE 0 END),0) won,
+                  COALESCE(SUM(CASE WHEN status='PERDIDA' THEN 1 ELSE 0 END),0) lost,
+                  COALESCE(SUM(CASE WHEN status='GANHADA' THEN action_value ELSE 0 END),0) total_value,
+                  COALESCE(SUM(CASE WHEN status='GANHADA' THEN family_value ELSE 0 END),0) family_value,
+                  COALESCE(SUM(CASE WHEN status='GANHADA' THEN participant_pool ELSE 0 END),0) member_value
+                  FROM action_records WHERE week_start=?
+              ''',(ws,))[0]
+              members=getall("SELECT COUNT(*) n FROM members WHERE active=1")[0]['n']
+              participants=getall('''SELECT COUNT(DISTINCT ap.member_id) n FROM action_participants ap JOIN action_records ar ON ar.id=ap.record_id WHERE ar.week_start=? AND ap.member_id IS NOT NULL''',(ws,))[0]['n']
+              farm=getall('''SELECT COALESCE(SUM(quantity),0) n FROM farms WHERE date(created_at)>=date(?)''',(ws,))[0]['n']
+              won=int(w['won'] or 0); lost=int(w['lost'] or 0); results=won+lost
+              pct=round(won*100/results) if results else 0
+              cards=''.join(f'''<div class="card"><div class="label">{a}</div><div class="metric">{b}</div><div class="muted" style="margin-top:6px;font-size:12px">{c}</div></div>''' for a,b,c in [
+                  ('Movimentado · semana',money(w['total_value']),'Somente ações ganhas'),
+                  ('Parte da família',money(w['family_value']),'50% das ações ganhas'),
+                  ('Distribuído aos membros',money(w['member_value']),'50% das ações ganhas'),
+                  ('Membros ativos',members,f'{participants} participaram esta semana')])
+              recent=getall('''SELECT ar.id,ar.created_at,ar.action_value,ar.status,a.name FROM action_records ar JOIN actions a ON a.id=ar.action_id ORDER BY ar.id DESC LIMIT 8''')
+              recent_rows=''.join(f'''<tr><td>{r['name']}</td><td>{r['created_at'][:10]}</td><td>{money(r['action_value'])}</td><td><span class="pill">{r['status']}</span></td><td><a href="{url_for('result',record_id=r['id'])}">Ver</a></td></tr>''' for r in recent) or '<tr><td colspan="5" class="muted">Nenhuma ação registrada ainda.</td></tr>'
+              top=getall('''SELECT m.id,m.name,m.cargo,COUNT(ap.id) qty,COALESCE(SUM(CASE WHEN ar.status='GANHADA' THEN ap.value_received ELSE 0 END),0) received FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id LEFT JOIN action_records ar ON ar.id=ap.record_id WHERE m.active=1 GROUP BY m.id ORDER BY qty DESC,received DESC,m.name LIMIT 5''')
+              top_rows=''.join(f'''<tr><td><a href="{url_for('member_profile',member_id=m['id'])}">{m['name']}</a></td><td>{m['cargo']}</td><td>{m['qty']}</td><td>{money(m['received'])}</td></tr>''' for m in top) or '<tr><td colspan="4" class="muted">Ainda não há participações.</td></tr>'
+              return shell('Central de Inteligência',f'''
+              <div class="card"><div style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap"><div><div class="label">PAINEL PRINCIPAL</div><h1 style="margin:4px 0">Central de Inteligência</h1><p class="muted" style="margin:0">Dashboard inteligente · semana iniciada em {ws}</p></div><span class="pill">ATUALIZADO AUTOMATICAMENTE</span></div></div>
+              <div class="grid section">{cards}</div>
+              <div class="cards3 section">
+                <div class="card"><div class="label">RESULTADO DA SEMANA</div><div style="font-size:28px;font-weight:800;margin:8px 0">{won} ganhada(s)</div><div class="muted">{lost} perdida(s) · {w['total']} registrada(s)</div><div style="height:12px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:16px"><div style="width:{pct}%;height:100%;background:#d6b25e"></div></div><div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px"><span>Ganhas {pct}%</span><span>Perdidas {100-pct if results else 0}%</span></div></div>
+                <div class="card"><div class="label">DIVISÃO FINANCEIRA</div><div style="font-size:26px;font-weight:800;margin-top:12px">50% / 50%</div><div class="muted" style="margin-top:8px">Família: {money(w['family_value'])}</div><div class="muted">Membros: {money(w['member_value'])}</div></div>
+                <div class="card"><div class="label">INDICADORES</div><div style="margin-top:12px;line-height:1.9">👥 {members} membros ativos<br>🏆 {participants} participantes na semana<br>📦 {farm:g} unidades de farm na semana<br>💰 {money(w['total_value'])} movimentado na semana</div></div>
+              </div>
+              <div class="cards3 section"><div class="card tablewrap"><h2>Atividade recente</h2><table class="table"><tr><th>Ação</th><th>Data</th><th>Valor</th><th>Resultado</th><th></th></tr>{recent_rows}</table></div><div class="card tablewrap"><h2>Destaques dos membros</h2><table class="table"><tr><th>Membro</th><th>Cargo</th><th>Participações</th><th>Recebido</th></tr>{top_rows}</table></div></div>
+              <div class="section"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><h2 style="margin:0">Ações da semana</h2><a class="btn secondary" href="{url_for('ranking')}">Ver ranking completo</a></div><div class="cards3" style="margin-top:14px">{''.join(f'''<div class="card"><span class="pill">{(n:=getall('SELECT COUNT(*) n FROM action_records WHERE action_id=? AND week_start=?',(a['id'],ws))[0]['n'])}/{a['weekly_limit'] if a['weekly_limit'] is not None else '∞'}</span><h2>{a['name']}</h2><p class="muted">Valor: {money(a['action_value']) if a['action_value'] else 'Ainda não definido'}</p><a class="btn {'secondary' if a['weekly_limit'] is not None and n>=a['weekly_limit'] else ''}" href="{url_for('action_detail',action_id=a['id'])}">{'Limite atingido' if a['weekly_limit'] is not None and n>=a['weekly_limit'] else 'Abrir ação'}</a></div>''' for a in getall('SELECT * FROM actions WHERE active=1 ORDER BY id'))}</div></div>
+              ''')
+          '''
+
+          profile=r'''# ============================================================
+          # PERFIL DO MEMBRO
+          # ============================================================
+          @app.get('/members/<int:member_id>')
+          @auth
+          def member_profile(member_id):
+              rows=getall('SELECT * FROM members WHERE id=? AND active=1',(member_id,))
+              if not rows: abort(404)
+              m=rows[0]
+              st=getall('''SELECT COUNT(ap.id) participations,COALESCE(SUM(CASE WHEN ar.status='GANHADA' THEN 1 ELSE 0 END),0) won,COALESCE(SUM(CASE WHEN ar.status='PERDIDA' THEN 1 ELSE 0 END),0) lost,COALESCE(SUM(CASE WHEN ar.status='GANHADA' THEN ap.value_received ELSE 0 END),0) received,(SELECT COALESCE(SUM(quantity),0) FROM farms WHERE member_id=m.id) farm_qty FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id LEFT JOIN action_records ar ON ar.id=ap.record_id WHERE m.id=? GROUP BY m.id''',(member_id,))[0]
+              hist=getall('''SELECT ar.id,ar.created_at,ar.status,ap.value_received,ap.weapon,a.name action_name FROM action_participants ap JOIN action_records ar ON ar.id=ap.record_id JOIN actions a ON a.id=ar.action_id WHERE ap.member_id=? ORDER BY ar.id DESC LIMIT 100''',(member_id,))
+              rows_html=''.join(f'''<tr><td>{h['action_name']}</td><td>{h['created_at'][:10]}</td><td><span class="pill">{h['status']}</span></td><td>{money(h['value_received']) if h['status']=='GANHADA' else 'R$ 0,00'}</td><td>{'Sim' if h['weapon']=='SIM' else 'Não'}</td><td><a href="{url_for('result',record_id=h['id'])}">Ver ação</a></td></tr>''' for h in hist) or '<tr><td colspan="6" class="muted">Nenhuma participação registrada.</td></tr>'
+              return shell('Perfil · '+m['name'],f'''<div class="card"><div style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap"><div><div class="label">PERFIL DO MEMBRO</div><h1 style="margin:4px 0">{m['name']}</h1><p class="muted" style="margin:0">Passaporte: {m['passport'] or '—'} · {m['cargo']}</p></div><a class="btn secondary" href="{url_for('members')}">Voltar</a></div></div><div class="grid section"><div class="card"><div class="label">PARTICIPAÇÕES</div><div class="metric">{st['participations']}</div></div><div class="card"><div class="label">GANHADAS</div><div class="metric">{st['won']}</div></div><div class="card"><div class="label">PERDIDAS</div><div class="metric">{st['lost']}</div></div><div class="card"><div class="label">TOTAL RECEBIDO</div><div class="metric">{money(st['received'])}</div></div></div><div class="cards3 section"><div class="card"><div class="label">FARM REGISTRADO</div><div class="metric">{st['farm_qty']:g}</div></div><div class="card"><div class="label">ARMAMENTO</div><div style="font-size:22px;font-weight:800;margin-top:8px">No histórico</div><div class="muted">Cada participação mostra Sim/Não.</div></div><div class="card"><div class="label">OBSERVAÇÕES</div><div class="muted" style="margin-top:10px">{m['notes'] or 'Nenhuma observação cadastrada.'}</div></div></div><div class="card section tablewrap"><h2>Histórico de ações</h2><table class="table"><tr><th>Ação</th><th>Data</th><th>Resultado</th><th>Recebido</th><th>Armamento</th><th></th></tr>{rows_html}</table></div>''')
+          '''
+
+          a=s.index("@app.get('/dashboard')"); b=s.index("# ============================================================\n# FARM",a); s=s[:a]+dashboard+s[b:]
+          ps=s.index("# ============================================================\n# EDITAR MEMBRO"); s=s[:ps]+profile+s[ps:]
           old="<td>{m['name']}</td>\n                <td>{m['passport'] or '—'}</td>"
           new="<td><a href=\"{url_for('member_profile', member_id=m['id'])}\">{m['name']}</a></td>\n                <td>{m['passport'] or '—'}</td>"
-          if old not in s:
-              raise SystemExit('member link patch target not found')
+          if old not in s: raise SystemExit('member link target not found')
           s=s.replace(old,new,1)
           p.write_text(s,encoding='utf-8')
           PY
