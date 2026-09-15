@@ -22,33 +22,27 @@ jobs:
           p = Path('central_lastro.py')
           s = p.read_text(encoding='utf-8')
 
-          # Backend participant flag.
           s = s.replace("participant_eligible = request.form.get(\n                f'eligible_{mid}',\n                '0'\n            ) == '1'", "brought_armament = request.form.get(\n                f'armament_{mid}',\n                'NAO'\n            ).upper() == 'SIM'", 1)
           s = s.replace("participant_eligible = request.form.get(\n                f'external_eligible_{i}',\n                '0'\n            ) == '1'", "brought_armament = request.form.get(\n                f'external_armament_{i}',\n                'NAO'\n            ).upper() == 'SIM'", 1)
           s = s.replace('participant_eligible', 'brought_armament')
 
-          # Everyone participates in the pool when the action is won.
           s = re.sub(r"eligible = \[\s*x\s*for x in participants\s*if x\[4\] and result_status == 'GANHADA'\s*\]", "eligible = participants if result_status == 'GANHADA' else []", s, count=1)
           s = s.replace("ok = bool(brought_armament) and result_status == 'GANHADA'", "ok = result_status == 'GANHADA'")
           s = s.replace("'Não elegível para a divisão',", "'Ação perdida',")
-
-          # Persist SIM/NAO in the existing weapon column.
           s = re.sub(r"side,\s*''\s*,\s*int\(ok\),", "side,\n                        'SIM' if brought_armament else 'NAO',\n                        int(ok),", s, count=1)
 
-          # Member selector: replace old eligibility selector wherever present.
+          # Member and external selectors.
           s = s.replace('data-eligible', 'data-armament')
           s = s.replace("let eligible = r.querySelector('[data-armament]');", "let armament = r.querySelector('[data-armament]');")
           s = s.replace("eligible.name = 'eligible_' + s.value;", "armament.name = 'armament_' + s.value;")
           s = s.replace("'eligible_' + s.value", "'armament_' + s.value")
-          s = s.replace("name=\"external_eligible_${i}\"", "name=\"external_armament_${i}\"")
           s = s.replace('external_eligible_', 'external_armament_')
           s = re.sub(r'Participa da divisão\?', 'Trouxe armamento?', s)
           s = re.sub(r'Participação na divisão', 'Trouxe armamento?', s)
+          s = s.replace('<option value="0">Não elegível</option>\n                                <option value="1">Elegível</option>', '<option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>')
+          s = s.replace('<option value="0">Não</option>\n                                <option value="1">Sim</option>', '<option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>')
 
-          # Ensure the armament choices are present in old select blocks.
-          s = re.sub(r'<select class="select" data-armament>.*?</select>', '''<select class="select" data-armament>\n                                <option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>\n                            </select>''', s, count=1, flags=re.S)
-
-          # Result/member history display.
+          # Persist/display armament flag in history/result tables.
           if 'ap.weapon armament' not in s:
               s = s.replace('ap.value_received,\n            a.name action_name', 'ap.value_received,\n            ap.weapon armament,\n            a.name action_name', 1)
           s = s.replace("<td>{money(r['value_received'])}</td>\n            <td>{r['created_at'][:16].replace('T',' ')}</td>", "<td>{money(r['value_received'])}</td>\n            <td>{'Sim' if r['armament'] == 'SIM' else 'Não'}</td>\n            <td>{r['created_at'][:16].replace('T',' ')}</td>", 1)
@@ -56,13 +50,8 @@ jobs:
           s = s.replace("<td>{money(p[\"value_received\"])}</td>\n            <td>{p[\"reason\"] or \"—\"}</td>", "<td>{money(p[\"value_received\"])}</td>\n            <td>{'Sim' if p['weapon'] == 'SIM' else 'Não'}</td>\n            <td>{p[\"reason\"] or \"—\"}</td>", 1)
           s = s.replace('<th>Recebeu</th>\n                <th>Observação</th>', '<th>Recebeu</th>\n                <th>Armamento</th>\n                <th>Observação</th>', 1)
 
-          # External participant selector, if still in legacy markup.
-          s = re.sub(r'<select class="select" name="external_armament_\$\{i\}">.*?</select>', '''<select class="select" name="external_armament_${i}">\n                                <option value="NAO">Não</option>\n                                <option value="SIM">Sim</option>\n                            </select>''', s, count=1, flags=re.S)
-
-          if 'brought_armament' not in s:
-              raise SystemExit('armament backend missing')
-          if 'external_armament_' not in s:
-              raise SystemExit('external armament field missing')
+          if 'brought_armament' not in s or 'external_armament_' not in s:
+              raise SystemExit('armament tracking incomplete')
 
           p.write_text(s, encoding='utf-8')
           PY
@@ -72,5 +61,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add central_lastro.py
-          git diff --cached --quiet || git commit -m 'Replace division eligibility with armament tracking'
+          git diff --cached --quiet || git commit -m 'Finalize armament tracking UI'
           git push
