@@ -1,0 +1,32 @@
+name: Apply LASTRO patch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate and apply patch
+        run: |
+          set -e
+          git apply --check lastro-update.patch
+          git apply lastro-update.patch
+          python -m py_compile central_lastro.py
+          rm -f lastro-update.patch
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add central_lastro.py lastro-update.patch
+          git diff --cached --quiet || git commit -m 'Update action results and member history'
+          git push
