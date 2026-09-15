@@ -1,0 +1,111 @@
+name: Update action status and member history
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: ${{ !contains(github.event.head_commit.message, 'auto: actions status') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply action changes
+        env:
+          FILE: central_lastro.py
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('central_lastro.py')
+          s = p.read_text()
+
+          # Keep legacy records financially active as won.
+          needle = "    c.commit()\n    c.close()\n\n    # CSRF para POSTs autenticados\n"
+          if needle in s and "UPDATE action_records SET status='GANHADA'" not in s:
+              s = s.replace(needle, "    c.execute(\"UPDATE action_records SET status='GANHADA' WHERE status='FINALIZADA'\")\n\n" + needle, 1)
+
+          # Dashboard: only won actions affect money totals.
+          s = s.replace(
+              "SELECT COALESCE(SUM(action_value),0) v\n        FROM action_records\n        '''",
+              "SELECT COALESCE(SUM(action_value),0) v\n        FROM action_records\n        WHERE status='GANHADA'\n        '''", 1)
+          s = s.replace(
+              "WHERE week_start=?\n        ''',\n        (ws,)\n    )[0]['v']",
+              "WHERE week_start=?\n        AND status='GANHADA'\n        ''',\n        (ws,)\n    )[0]['v']", 1)
+
+          # Dashboard weekly chart data.
+          marker = "    action_cards = []\n"
+          if marker in s and 'week_participants = getall' not in s:
+              extra = '''    week_participants = getall(\n        \'\'\'\n        SELECT COALESCE(SUM(participant_pool),0) v\n        FROM action_records\n        WHERE week_start=? AND status='GANHADA'\n        \'\'\', (ws,)\n    )[0]['v']\n\n    week_won = getall(\n        \'\'\'SELECT COUNT(*) n FROM action_records WHERE week_start=? AND status='GANHADA'\'\'', (ws,)\n    )[0]['n']\n\n    week_lost = getall(\n        \'\'\'SELECT COUNT(*) n FROM action_records WHERE week_start=? AND status='PERDIDA'\'\'', (ws,)\n    )[0]['n']\n\n    total_week_actions = week_won + week_lost\n    won_pct = round(week_won * 100 / total_week_actions, 1) if total_week_actions else 0\n    lost_pct = round(week_lost * 100 / total_week_actions, 1) if total_week_actions else 0\n    family_total = float(week_total or 0)\n    participant_total = float(week_participants or 0)\n    financial_total = family_total + participant_total\n    family_pct = round(family_total * 100 / financial_total, 1) if financial_total else 50\n    participant_pct = round(participant_total * 100 / financial_total, 1) if financial_total else 50\n\n'''
+              s = s.replace(marker, extra + marker, 1)
+
+          # Dashboard chart UI.
+          marker = "        <div class=\"section\">\n\n            <h2>\n                Ações da semana\n            </h2>"
+          if marker in s and 'Resultado das ações · semana' not in s:
+              chart = '''        <div class="section">\n            <div class="cards3">\n                <div class="card">\n                    <div class="label">Resultado das ações · semana</div>\n                    <div style="height:18px;background:#211b0c;border-radius:999px;overflow:hidden;margin:14px 0 8px">\n                        <div style="height:100%;width:{won_pct}%;background:var(--gold);float:left"></div>\n                        <div style="height:100%;width:{lost_pct}%;background:#71312e;float:left"></div>\n                    </div>\n                    <div class="split"><span class="status-ok">Ganhadas: {week_won} · {won_pct}%</span><span class="status-no">Perdidas: {week_lost} · {lost_pct}%</span></div>\n                </div>\n                <div class="card">\n                    <div class="label">Divisão financeira · ganhadas</div>\n                    <div style="width:150px;height:150px;border-radius:50%;margin:16px auto;background:conic-gradient(var(--gold) 0 {family_pct}%, #5b4a22 {family_pct}% 100%);display:grid;place-items:center">\n                        <div style="width:92px;height:92px;border-radius:50%;background:#0b0b09;display:grid;place-items:center;text-align:center;font-weight:800">{family_pct}%<br><span class="muted" style="font-size:10px">FAMÍLIA</span></div>\n                    </div>\n                    <div class="split"><span>Família: {family_pct}%</span><span>Participantes: {participant_pct}%</span></div>\n                </div>\n                <div class="card">\n                    <div class="label">Valores da semana</div>\n                    <p>Família: <b>{money(family_total)}</b></p>\n                    <p>Participantes: <b>{money(participant_total)}</b></p>\n                    <p class="muted">Ações perdidas não movimentam o painel financeiro.</p>\n                </div>\n            </div>\n        </div>\n\n        <div class="section">\n            <h2>Ações da semana</h2>'''
+              s = s.replace(marker, chart, 1)
+
+          # Action cards: no police selection/display.
+          s = s.replace('''                <p class="muted">\n                    Bandidos:\n                    {data.get("bandits","—")}\n                    ·\n                    Policiais:\n                    {data.get("police","—")}\n                </p>\n''', '''                <p class="muted">\n                    Participantes: {data.get("bandits","—")}\n                </p>\n''', 1)
+
+          # Registration: every selected participant is a participant; no side choice.
+          s = re.sub(r"\n            side = request\.form\.get\(\n                f'side_\{mid\}',\n                'BANDIDO'\n            \)\n", "\n", s, count=1)
+          s = re.sub(r"\n            side = request\.form\.get\(\n                f'external_side_\{i\}',\n                'BANDIDO'\n            \)\n", "\n", s, count=1)
+          s = s.replace("                    side,\n                    participant_eligible\n", "                    'BANDIDO',\n                    participant_eligible\n", 2)
+
+          # Count only the selected participants; remove police validation.
+          old = '''        b = sum(\n            1\n            for x in participants\n            if x[3] == 'BANDIDO'\n        )\n\n        p = sum(\n            1\n            for x in participants\n            if x[3] == 'POLICIAL'\n        )\n'''
+          if old in s:
+              s = s.replace(old, "        b = len(participants)\n", 1)
+          s = re.sub(r"        if \(\n            not check_count\(\n                rules\.get\('bandits'\),\n                b\n            \)\n            or\n            not check_count\(\n                rules\.get\('police'\),\n                p\n            \)\n        \):.*?            return redirect\(\n                request\.url\n            \)\n", """        if not check_count(rules.get('bandits'), b):\n            flash(f'Quantidade inválida. Participantes: {b}.', 'error')\n            return redirect(request.url)\n\n        result_status = request.form.get('status', 'GANHADA').upper()\n        if result_status not in ('GANHADA', 'PERDIDA'):\n            flash('Resultado da ação inválido.', 'error')\n            return redirect(request.url)\n\n""", s, count=1, flags=re.S)
+
+          # Lost actions keep their history but do not create financial movement.
+          s = re.sub(r"            family = round\(\n                value \* \.5,\n                2\n            \)\n\n            pool = round\(\n                value - family,\n                2\n            \)", "            family = round(value * .5, 2) if result_status == 'GANHADA' else 0\n\n            pool = round(value - family, 2) if result_status == 'GANHADA' else 0", s, count=1)
+          s = s.replace("                if x[4]\n            ]", "                if x[4] and result_status == 'GANHADA'\n            ]", 1)
+          s = s.replace("                    created_at\n                )\n                VALUES(?,?,?,?,?,?,?,?)", "                    created_at,\n                    status\n                )\n                VALUES(?,?,?,?,?,?,?,?,?)", 1)
+          s = s.replace("                    session['uid'],\n                    now()\n                )\n            ).lastrowid", "                    session['uid'],\n                    now(),\n                    result_status\n                )\n            ).lastrowid", 1)
+          # Wrap both financial transaction inserts in the won condition.
+          ft = s.find("            c.execute(\n                '''\n                INSERT INTO financial_transactions(", s.find('rid = c.execute'))
+          idx = s.find("            idx = 0", ft)
+          if ft != -1 and idx != -1 and "if result_status == 'GANHADA':" not in s[ft-80:ft]:
+              block = s[ft:idx]
+              indented = '\n'.join(('    '+line) if line else line for line in block.splitlines())
+              s = s[:ft] + "            if result_status == 'GANHADA':\n\n" + indented + "\n" + s[idx:]
+          s = s.replace("                ok = bool(participant_eligible)", "                ok = bool(participant_eligible) and result_status == 'GANHADA'", 1)
+          s = s.replace("                    'Não elegível para a divisão',", "                    ('Ação perdida' if result_status == 'PERDIDA' else 'Não elegível para a divisão'),", 1)
+
+          # Add result selector to the form.
+          button = '''            <button\n                class="btn section"\n                style="width:100%"\n            >\n                Finalizar ação\n            </button>'''
+          if button in s and 'name="status"' not in s:
+              form = '''            <div class="field section">\n                <label>Resultado da ação</label>\n                <select class="select" name="status" required>\n                    <option value="GANHADA">Ganhada</option>\n                    <option value="PERDIDA">Perdida</option>\n                </select>\n                <span class="muted">Ações perdidas ficam no histórico e no perfil, mas não movimentam o painel financeiro.</span>\n            </div>\n\n''' + button
+              s = s.replace(button, form, 1)
+
+          # Remove team selectors from member/external form HTML.
+          s = re.sub(r"\n                        <div class=\"field\">\n\n                            <label>\n                                Equipe\n                            </label>\n\n                            <select\n                                class=\"select\"\n                                data-side\n                            >.*?                            </select>\n\n                        </div>\n", "\n", s, count=1, flags=re.S)
+          s = re.sub(r"\n                        <div class=\"field\">\n\n                            <label>\n                                Equipe\n                            </label>\n\n                            <select\n                                class=\"select\"\n                                name=\"external_side_\$\{\{i\}\}\"\n                            >.*?                            </select>\n\n                        </div>\n", "\n", s, count=1, flags=re.S)
+          s = s.replace("                <option value=\"0\">Não elegível</option>\n                <option value=\"1\">Elegível</option>", "                <option value=\"1\">Participa da divisão</option>\n                <option value=\"0\">Não participa da divisão</option>", 2)
+          s = s.replace("        let side =\n            r.querySelector(\n                '[data-side]'\n            );\n\n", "", 1)
+          s = s.replace("        side.name =\n            'side_' + s.value;\n\n", "", 1)
+
+          # Member profile with complete won/lost action history.
+          marker = "# ============================================================\n# EDITAR MEMBRO\n# ============================================================\n"
+          if marker in s and 'def member_profile(member_id):' not in s:
+              route = '''# ============================================================\n# PERFIL DO MEMBRO\n# ============================================================\n\n@app.get('/members/<int:member_id>')\n@auth\ndef member_profile(member_id):\n    rows = getall('SELECT * FROM members WHERE id=?', (member_id,))\n    if not rows:\n        abort(404)\n    m = rows[0]\n    actions = getall('''\n        SELECT ar.id record_id, ar.status, ar.created_at, ar.action_value, ap.value_received, a.name action_name\n        FROM action_participants ap\n        JOIN action_records ar ON ar.id=ap.record_id\n        JOIN actions a ON a.id=ar.action_id\n        WHERE ap.member_id=?\n        ORDER BY ar.created_at DESC\n    ''', (member_id,))\n    won = sum(1 for x in actions if x['status'] == 'GANHADA')\n    lost = sum(1 for x in actions if x['status'] == 'PERDIDA')\n    received = sum(float(x['value_received'] or 0) for x in actions if x['status'] == 'GANHADA')\n    rows_html = ''.join(f'''\n        <tr>\n            <td>{x['action_name']}</td>\n            <td class="{'status-ok' if x['status']=='GANHADA' else 'status-no'}">{x['status'].title()}</td>\n            <td>{money(x['action_value'])}</td>\n            <td>{money(x['value_received'])}</td>\n            <td>{x['created_at'][:16].replace('T',' ')}</td>\n            <td><a href="{url_for('result', record_id=x['record_id'])}">Abrir</a></td>\n        </tr>\n    ''' for x in actions)\n    return shell('Perfil · ' + m['name'], f'''\n        <div class="grid">\n            <div class="card"><div class="label">Cargo</div><div class="metric" style="font-size:20px">{m['cargo']}</div></div>\n            <div class="card"><div class="label">Passaporte</div><div class="metric">{m['passport'] or '—'}</div></div>\n            <div class="card"><div class="label">Ações ganhadas</div><div class="metric">{won}</div></div>\n            <div class="card"><div class="label">Ações perdidas</div><div class="metric">{lost}</div></div>\n        </div>\n        <div class="card section"><div class="label">Total recebido em ações ganhadas</div><div class="metric">{money(received)}</div></div>\n        <div class="card section tablewrap">\n            <h2>Histórico de ações</h2>\n            <table class="table">\n                <tr><th>Ação</th><th>Resultado</th><th>Valor</th><th>Recebeu</th><th>Data</th><th></th></tr>\n                {rows_html or '<tr><td colspan="6" class="muted">Nenhuma ação registrada.</td></tr>'}\n            </table>\n        </div>\n    ''')\n\n\n'''
+              s = s.replace(marker, route + marker, 1)
+          s = s.replace("<td>{m['name']}</td>", "<td><a href=\"{url_for('member_profile', member_id=m['id'])}\">{m['name']}</a></td>", 1)
+
+          p.write_text(s)
+          PY
+      - name: Validate Python
+        run: python -m py_compile central_lastro.py
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add central_lastro.py
+          git diff --cached --quiet && exit 0
+          git commit -m "auto: actions status"
+          git push
