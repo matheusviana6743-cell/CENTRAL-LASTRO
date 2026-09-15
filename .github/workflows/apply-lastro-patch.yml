@@ -9,18 +9,19 @@ permissions:
 
 jobs:
   update:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply changes
+      - name: Apply and validate
         run: |
           set -e
-          python apply_actions_v2.py
+          python apply_actions_v3.py
           python -m py_compile central_lastro.py
           grep -q 'name="status"' central_lastro.py
           grep -q "result_status" central_lastro.py
           grep -q "status='GANHADA'" central_lastro.py
-          rm -f apply_changes.py apply_actions_v2.py lastro-update.patch lastro-tail.patch lastro-prefix.patch workflow-trigger.txt
+          rm -f apply_changes.py apply_actions_v2.py apply_actions_v3.py lastro-update.patch lastro-tail.patch lastro-prefix.patch workflow-trigger.txt
       - name: Commit
         run: |
           git config user.name 'github-actions[bot]'
