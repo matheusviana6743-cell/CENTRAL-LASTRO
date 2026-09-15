@@ -927,24 +927,21 @@ a{
 }
 
 .tablewrap{
-    width:100%;
-    overflow:hidden
+    overflow:auto
 }
 
 .table{
     width:100%;
-    max-width:100%;
-    border-collapse:collapse;
-    table-layout:fixed
+    min-width:640px;
+    border-collapse:collapse
 }
 
 .table th,
 .table td{
-    padding:11px 8px;
+    padding:11px;
     border-bottom:1px solid #2a220f;
     text-align:left;
-    white-space:normal;
-    overflow-wrap:anywhere
+    white-space:nowrap
 }
 
 .table th{
@@ -1000,33 +997,22 @@ a{
     margin-top:10px
 }
 
-.login-brand{text-align:center;margin-bottom:26px}.login-brand-mark{width:68px;height:68px;margin:0 auto 15px;display:grid;place-items:center;border-radius:20px;border:1px solid #6d5920;background:radial-gradient(circle,#2a210b,#0d0c09);color:var(--gold2);font-size:26px;font-weight:900;letter-spacing:.08em;box-shadow:inset 0 0 24px rgba(212,175,55,.06),0 12px 32px rgba(0,0,0,.35)}.login-brand b{display:block;color:var(--gold2);font-size:31px;letter-spacing:.22em}.login-brand small{display:block;margin-top:6px;color:#a69d8a;letter-spacing:.18em;font-size:9px;text-transform:uppercase}.login-subtitle{text-align:center;color:#7f7768;font-size:11px;margin:-10px 0 22px}.login-divider{height:1px;background:linear-gradient(90deg,transparent,#4f4018,transparent);margin:0 0 22px}
-
 .loginpage{
-    position:relative;
     min-height:100vh;
     display:grid;
     place-items:center;
-    padding:24px;
-    overflow:hidden;
-    background-image:linear-gradient(rgba(212,175,55,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,.025) 1px,transparent 1px),radial-gradient(circle at 50% 18%,rgba(212,175,55,.16),transparent 28%),radial-gradient(circle at 10% 90%,rgba(212,175,55,.07),transparent 24%),linear-gradient(145deg,#030303,#0a0906 55%,#020202);background-size:38px 38px,38px 38px,auto,auto,auto
+    padding:20px
 }
 
-.loginpage:before,.loginpage:after{content:"";position:absolute;border:1px solid rgba(212,175,55,.10);border-radius:50%;pointer-events:none}.loginpage:before{width:580px;height:580px;top:-300px;right:-180px;box-shadow:0 0 80px rgba(212,175,55,.05)}.loginpage:after{width:420px;height:420px;bottom:-240px;left:-170px}
-.loginbox{position:relative;z-index:2;width:min(460px,94vw);padding:34px;border-color:#56451b;background:linear-gradient(180deg,rgba(22,19,12,.97),rgba(8,8,7,.985));box-shadow:0 30px 80px rgba(0,0,0,.58),0 0 45px rgba(212,175,55,.06)}
+.loginbox{
+    width:min(440px,94vw)
+}
 
 .searchbox{
     display:grid;
     grid-template-columns:1fr auto;
     gap:10px
 }
-
-.chart-card{position:relative;overflow:hidden}
-.chart-layout{display:grid;grid-template-columns:145px 1fr;gap:22px;align-items:center}
-.chart-ring{position:relative;width:128px;height:128px;margin:auto;border-radius:50%;background:conic-gradient(#d6b25e var(--wins,0%),#614d1e var(--wins,0%) var(--end,0%),rgba(255,255,255,.06) var(--end,0%) 100%);display:grid;place-items:center;box-shadow:0 0 0 10px rgba(212,175,55,.035),0 14px 30px rgba(0,0,0,.35)}
-.chart-ring:after{content:"";width:82px;height:82px;border-radius:50%;background:#0d0d0b;border:1px solid #3a2d12;box-shadow:inset 0 0 20px rgba(0,0,0,.35)}
-.chart-center{position:absolute;width:82px;text-align:center;z-index:1}.chart-center strong{display:block;color:var(--gold2);font-size:23px;line-height:1}.chart-center span{color:var(--muted);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
-.chart-bars{display:grid;gap:13px}.chart-bar-row{display:grid;grid-template-columns:94px 1fr 42px;gap:10px;align-items:center}.chart-bar-label{font-size:11px;color:#d8d0bd;text-transform:uppercase;letter-spacing:.06em}.chart-bar-track{height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.055);border:1px solid rgba(212,175,55,.08)}.chart-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#8e701e,#f0d477)}.chart-bar-value{text-align:right;color:var(--gold2);font-weight:800;font-size:12px}
 
 .split{
     display:grid;
@@ -1065,11 +1051,6 @@ a{
 .search-actions{margin-bottom:18px;position:sticky;top:10px;z-index:3}
 
 @media(max-width:720px){
-    .chart-layout{grid-template-columns:1fr}
-    .chart-bar-row{grid-template-columns:78px 1fr 34px}
-    .table th,.table td{padding:9px 6px;font-size:12px}
-    .table th{font-size:9px}
-    .loginbox{padding:26px 20px}
     .profile-card{grid-template-columns:1fr}
     .profile-avatar-large{width:96px;height:96px}
     .top-user-info{min-width:auto}
@@ -1142,6 +1123,8 @@ IC = {
 def shell(title, body):
 
     items = [('Painel','dashboard'),('Farm','farms'),('Produção','productions'),('Baú','chests'),('Ações','actions'),('Ranking','ranking'),('Hierarquia','members'),('Histórico','history')]
+    if session.get('role') == 'ADMINISTRADOR':
+        items.append(('Usuários','users'))
     nav=''.join(f'<a href="{url_for(route)}"><span class="navicon">{IC[name]}</span><span>{name}</span></a>' for name,route in items)
     messages=''.join(f'''<div class="flash {"error" if kind=="error" else ""}">{msg}</div>''' for kind,msg in session.pop('_flashes',[]))
     current=getall('''SELECT u.name,u.role,u.passport,u.avatar,m.passport member_passport FROM users u LEFT JOIN members m ON lower(m.name)=lower(u.name) WHERE u.id=?''',(session.get('uid'),))
@@ -1272,13 +1255,13 @@ def login():
                     value="{csrf()}"
                 >
 
-                <div class="login-brand">
-                    <div class="login-brand-mark">L</div>
+                <div class="brand">
+
                     <b>LASTRO</b>
+
                     <small>EMPRESA LASTRO</small>
+
                 </div>
-                <div class="login-subtitle">Acesso privado à central administrativa</div>
-                <div class="login-divider"></div>
 
                 <div class="field">
 
@@ -1429,14 +1412,10 @@ def dashboard():
 
     top = getall("SELECT m.id,m.name,m.cargo,COUNT(ap.id) qty,COALESCE(SUM(CASE WHEN ar.result_status='GANHA' THEN ap.value_received ELSE 0 END),0) received FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id LEFT JOIN action_records ar ON ar.id=ap.record_id WHERE m.active=1 GROUP BY m.id ORDER BY qty DESC,received DESC,m.name LIMIT 5")
     top_rows = ''.join(
-        '<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
-            m['name'], m['cargo'], m['qty'], money(m['received'])
+        '<tr><td><a href=\"{}\">{}</a></td><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
+            url_for('member_profile', member_id=m['id']), m['name'], m['cargo'], m['qty'], money(m['received'])
         ) for m in top
     ) or '<tr><td colspan=\"4\" class=\"muted\">Ainda não há participações.</td></tr>'
-
-    total_results = wins + losses
-    win_pct = round(wins * 100 / total_results) if total_results else 0
-    loss_pct = round(losses * 100 / total_results) if total_results else 0
 
     cards = ''.join(
         '<div class=\"card\"><div class=\"label\">{}</div><div class=\"metric\">{}</div><div class=\"muted\" style=\"margin-top:6px;font-size:12px\">{}</div></div>'.format(label,value,desc)
@@ -1448,71 +1427,7 @@ def dashboard():
         ]
     )
 
-    return shell('Painel', f'''
-        <div class=\"card\">
-            <div style=\"display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap\">
-                <div>
-                    <div class=\"label\">PAINEL PRINCIPAL</div>
-                    <h1 style=\"margin:4px 0\">Central de Inteligência</h1>
-                    <p class=\"muted\" style=\"margin:0\">Dashboard da Empresa Lastro · semana iniciada em {ws}</p>
-                </div>
-                <span class=\"pill\">ATUALIZADO AUTOMATICAMENTE</span>
-            </div>
-        </div>
-
-        <div class=\"grid section\">{cards}</div>
-
-        <div class="cards3 section">
-            <div class="card chart-card">
-                <div class="label">GRÁFICO DE AÇÕES</div>
-                <div class="chart-layout" style="margin-top:14px">
-                    <div class="chart-ring" style="--wins:{win_pct}%;--end:{win_pct + loss_pct}%">
-                        <div class="chart-center"><strong>{actions_count}</strong><span>Ações</span></div>
-                    </div>
-                    <div class="chart-bars">
-                        <div class="chart-bar-row"><span class="chart-bar-label">Ganhas</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:{win_pct}%"></div></div><span class="chart-bar-value">{wins}</span></div>
-                        <div class="chart-bar-row"><span class="chart-bar-label">Perdidas</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:{loss_pct}%"></div></div><span class="chart-bar-value">{losses}</span></div>
-                        <div class="chart-bar-row"><span class="chart-bar-label">Participantes</span><div class="chart-bar-track"><div class="chart-bar-fill" style="width:{min(100, participants)}%"></div></div><span class="chart-bar-value">{participants}</span></div>
-                    </div>
-                </div>
-                <div class="muted" style="margin-top:14px;font-size:11px">{wins} ganhada(s) · {losses} perdida(s) · {actions_count} registrada(s)</div>
-            </div>
-
-            <div class="card">
-                <div class="label">DIVISÃO FINANCEIRA</div>
-                <div style="font-size:26px;font-weight:800;margin-top:12px">50% / 50%</div>
-                <div class="muted" style="margin-top:8px">Família: {money(family_total)}</div>
-                <div class="muted">Membros: {money(member_total)}</div>
-            </div>
-
-            <div class="card">
-                <div class="label">INDICADORES</div>
-                <div style="margin-top:12px;line-height:1.9">
-                    Membros ativos: {members_count}<br>
-                    Participantes na semana: {participants}<br>
-                    Farm na semana: {farm_week:g}<br>
-                    Movimentado na semana: {money(week_total)}
-                </div>
-            </div>
-        </div>
-
-        <div class="cards3 section">
-            <div class="card tablewrap">
-                <h2>Atividade recente</h2>
-                <table class=\"table\">
-                    <tr><th>Ação</th><th>Data</th><th>Valor</th><th>Resultado</th><th></th></tr>
-                    {recent_rows}
-                </table>
-            </div>
-            <div class=\"card tablewrap\">
-                <h2>Destaques dos membros</h2>
-                <table class=\"table\">
-                    <tr><th>Membro</th><th>Cargo</th><th>Participações</th><th>Recebido</th></tr>
-                    {top_rows}
-                </table>
-            </div>
-        </div>
-    ''')
+    return shell('Painel', f'''    <div class=\"card\">        <div style=\"display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap\">            <div><div class=\"label\">PAINEL PRINCIPAL</div><h1 style=\"margin:4px 0\">Central de Inteligência</h1><p class=\"muted\" style=\"margin:0\">Dashboard da Empresa Lastro · semana iniciada em {ws}</p></div>            <span class=\"pill\">ATUALIZADO AUTOMATICAMENTE</span>        </div>    </div>    <div class=\"grid section\">{cards}</div>    <div class=\"cards3 section\">        <div class=\"card\"><div class=\"label\">RESULTADO DA SEMANA</div><div style=\"font-size:28px;font-weight:800;margin:8px 0\">{wins} ganhada(s)</div><div class=\"muted\">{losses} perdida(s) · {actions_count} registrada(s)</div><div style=\"display:flex;justify-content:space-between;margin-top:16px;font-size:12px\"><span>Ganhas {round(wins*100/(wins+losses)) if wins+losses else 0}%</span><span>Perdidas {round(losses*100/(wins+losses)) if wins+losses else 0}%</span></div></div>        <div class=\"card\"><div class=\"label\">DIVISÃO FINANCEIRA</div><div style=\"font-size:26px;font-weight:800;margin-top:12px\">50% / 50%</div><div class=\"muted\" style=\"margin-top:8px\">Família: {money(family_total)}</div><div class=\"muted\">Membros: {money(member_total)}</div></div>        <div class=\"card\"><div class=\"label\">INDICADORES</div><div style=\"margin-top:12px;line-height:1.9\">Membros ativos: {members_count}<br>Participantes na semana: {participants}<br>Farm na semana: {farm_week:g}<br>Movimentado na semana: {money(week_total)}</div></div>    </div>    <div class=\"cards3 section\">        <div class=\"card tablewrap\"><h2>Atividade recente</h2><table class=\"table\"><tr><th>Ação</th><th>Data</th><th>Valor</th><th>Resultado</th><th></th></tr>{recent_rows}</table></div>        <div class=\"card tablewrap\"><h2>Destaques dos membros</h2><table class=\"table\"><tr><th>Membro</th><th>Cargo</th><th>Participações</th><th>Recebido</th></tr>{top_rows}</table></div>    </div>    ''')
 
 
 # ============================================================
@@ -3595,7 +3510,9 @@ def users():
 
             <td>{u["username"]}</td>
 
-            <td>{u["role"]}</td>
+            <td>{"Elite" if str(u["role"]).upper()=="ELITE.AI" else u["role"]}</td>
+
+            <td>{u["passport"] or "—"}</td>
 
             <td>
                 {"Ativo" if u["active"] else "Inativo"}
@@ -3637,6 +3554,7 @@ def users():
                     <th>Nome</th>
                     <th>Usuário</th>
                     <th>Perfil</th>
+                    <th>Passaporte</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
@@ -3984,7 +3902,11 @@ def user_edit(user_id):
                         class="input"
                         type="password"
                         name="password"
+                        minlength="8"
+                        placeholder="Deixe vazio para manter a atual"
                     >
+
+                    <small class="muted" style="display:block;margin-top:6px">A senha antiga não é exibida. Digite uma nova senha para redefinir o acesso.</small>
 
                 </div>
 
