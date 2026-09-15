@@ -270,8 +270,6 @@ CREATE TABLE IF NOT EXISTS users(
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL,
-    passport INTEGER,
-    avatar TEXT DEFAULT '',
     active INTEGER DEFAULT 1,
     created_at TEXT NOT NULL
 );
@@ -340,8 +338,7 @@ CREATE TABLE IF NOT EXISTS action_records(
     rules_snapshot TEXT,
     created_by INTEGER,
     created_at TEXT,
-    status TEXT DEFAULT 'FINALIZADA',
-    result_status TEXT DEFAULT 'GANHA'
+    status TEXT DEFAULT 'FINALIZADA'
 );
 
 CREATE TABLE IF NOT EXISTS external_participants(
@@ -528,18 +525,6 @@ def setup_request():
 
     c.executescript(SCHEMA)
 
-    user_cols = {r['name'] for r in c.execute('PRAGMA table_info(users)').fetchall()}
-    if 'passport' not in user_cols:
-        c.execute('ALTER TABLE users ADD COLUMN passport INTEGER')
-    if 'avatar' not in user_cols:
-        c.execute("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''")
-
-    action_cols = {r['name'] for r in c.execute('PRAGMA table_info(action_records)').fetchall()}
-    if 'result_status' not in action_cols:
-        c.execute("ALTER TABLE action_records ADD COLUMN result_status TEXT DEFAULT 'GANHA'")
-    c.execute("UPDATE action_records SET result_status='GANHA' WHERE result_status IS NULL OR result_status=''")
-    c.execute("DELETE FROM users WHERE lower(trim(name)) IN ('gerencia','gerência') OR lower(trim(username)) IN ('gerencia','gerência')")
-
     t = now()
 
     admin_user = os.getenv(
@@ -615,22 +600,6 @@ def setup_request():
             )
         )
 
-    c.execute(
-        '''
-        UPDATE users
-        SET passport=(
-            SELECT m.passport FROM members m
-            WHERE lower(m.name)=lower(users.name)
-            LIMIT 1
-        )
-        WHERE (passport IS NULL OR passport=0)
-        AND EXISTS (
-            SELECT 1 FROM members m2
-            WHERE lower(m2.name)=lower(users.name)
-        )
-        '''
-    )
-
     for name, data in ACTIONS.items():
 
         (
@@ -686,6 +655,8 @@ def setup_request():
             ''',
             (default_value, t, action_name)
         )
+
+    c.execute("UPDATE action_records SET status='GANHADA' WHERE status='FINALIZADA'")
 
     c.commit()
     c.close()
@@ -1028,36 +999,6 @@ a{
     color:#ff9f99
 }
 
-.nav a{display:flex;align-items:center;gap:10px;font-weight:650}
-.nav a:hover{transform:translateX(2px)}
-.navicon{width:22px;text-align:center;font-size:16px}
-.top-user{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border:1px solid #4b3b18;border-radius:14px;background:linear-gradient(180deg,#15120c,#0b0b09)}
-.top-user:hover{border-color:#7a6120}
-.avatar{width:38px;height:38px;border-radius:12px;border:1px solid #6c571d;object-fit:cover;background:#12100b;display:grid;place-items:center;color:var(--gold2);font-weight:900;overflow:hidden}
-.top-user-info{min-width:120px;text-align:right}
-.top-user-name{display:block;font-weight:800;color:#f5eedb}
-.top-user-meta{display:block;font-size:10px;color:var(--muted);margin-top:2px}
-.profile-card{display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:start}
-.profile-avatar-large{width:120px;height:120px;border-radius:24px;border:1px solid #6c571d;object-fit:cover;background:#12100b;display:grid;place-items:center;color:var(--gold2);font-size:38px;font-weight:900;overflow:hidden}
-.status-banner{margin-bottom:18px;padding:18px 20px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid #3e3316;background:linear-gradient(180deg,#15130c,#0d0d09)}
-.status-banner.ganha{border-color:#2f6f49;background:linear-gradient(180deg,#0c1d14,#0b120e)}
-.status-banner.perdida{border-color:#71312e;background:linear-gradient(180deg,#26110f,#150a09)}
-.status-banner .status-title{font-size:28px;font-weight:900;letter-spacing:.02em}
-.status-banner.ganha .status-title{color:#72e3a0}
-.status-banner.perdida .status-title{color:#ff9f99}
-.action-card{transition:.18s ease;position:relative}
-.action-card.hidden{display:none}
-.action-card:hover{transform:translateY(-2px);border-color:#66511c}
-.search-actions{margin-bottom:18px;position:sticky;top:10px;z-index:3}
-
-@media(max-width:720px){
-    .profile-card{grid-template-columns:1fr}
-    .profile-avatar-large{width:96px;height:96px}
-    .top-user-info{min-width:auto}
-    .top-user-meta{display:none}
-    .status-banner{align-items:flex-start;flex-direction:column}
-}
-
 @media(max-width:1100px){
     .cards3{grid-template-columns:1fr}
 }
@@ -1101,14 +1042,14 @@ a{
 # ============================================================
 
 IC = {
-    'Painel':'⌂',
-    'Farm':'◒',
-    'Produção':'⚙',
-    'Baú':'▤',
-    'Ações':'⚡',
-    'Ranking':'♕',
-    'Hierarquia':'♙',
-    'Histórico':'◷',
+    'Painel':'◈',
+    'Farm':'⬢',
+    'Produção':'◉',
+    'Baú':'▣',
+    'Ações':'◇',
+    'Ranking':'↗',
+    'Hierarquia':'♟',
+    'Histórico':'◫',
     'Usuários':'⚙',
     'Admin':'◆',
     'Externos':'◌',
@@ -1122,18 +1063,102 @@ IC = {
 
 def shell(title, body):
 
-    items = [('Painel','dashboard'),('Farm','farms'),('Produção','productions'),('Baú','chests'),('Ações','actions'),('Ranking','ranking'),('Hierarquia','members'),('Histórico','history')]
-    nav=''.join(f'<a href="{url_for(route)}"><span class="navicon">{IC[name]}</span><span>{name}</span></a>' for name,route in items)
-    messages=''.join(f'''<div class="flash {"error" if kind=="error" else ""}">{msg}</div>''' for kind,msg in session.pop('_flashes',[]))
-    current=getall('''SELECT u.name,u.role,u.passport,u.avatar,m.passport member_passport FROM users u LEFT JOIN members m ON lower(m.name)=lower(u.name) WHERE u.id=?''',(session.get('uid'),))
-    me=current[0] if current else {'name':session.get('name',''),'role':session.get('role',''),'passport':None,'avatar':'','member_passport':None}
-    passport=me['passport'] or me['member_passport'] or '—'
-    avatar_html=(f'<img class="avatar" src="{url_for("avatar_file",user_id=session.get('uid'))}" alt="Foto">' if me['avatar'] else f'<div class="avatar">{(me["name"] or "?")[0].upper()}</div>')
-    return render_template_string(f'''
-        <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} · CENTRAL LASTRO</title><style>{CSS}</style></head>
-        <body><div class="layout"><aside class="side"><div class="brand"><b>LASTRO</b><small>EMPRESA LASTRO</small></div><nav class="nav">{nav}</nav><a class="btn secondary" style="width:100%;margin-top:22px" href="{url_for('logout')}">Sair</a></aside>
-        <main class="main"><div class="top"><h1>{title}</h1><a class="top-user" href="{url_for('profile')}">{avatar_html}<span class="top-user-info"><span class="top-user-name">{me['name']}</span><span class="top-user-meta">Passaporte {passport} · {me['role']}</span></span></a></div>{messages}{body}</main></div>
-        <script>document.addEventListener('keydown',function(e){{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='l'){{window.location.href='{url_for("logs") if session.get("role")=="ADMINISTRADOR" else url_for("dashboard")}';}}}});</script></body></html>''')
+    items = [
+        ('Painel','dashboard'),
+        ('Farm','farms'),
+        ('Produção','productions'),
+        ('Baú','chests'),
+        ('Ações','actions'),
+        ('Ranking','ranking'),
+        ('Hierarquia','members'),
+        ('Histórico','history')
+    ]
+
+    if session.get('role') == 'ADMINISTRADOR':
+
+        items += [
+            ('Usuários','users'),
+            ('Admin','admin_actions'),
+            ('Externos','externals'),
+            ('Logs','logs')
+        ]
+
+    nav = ''.join(
+        f'<a href="{url_for(route)}">{IC[name]} &nbsp;{name}</a>'
+        for name, route in items
+    )
+
+    messages = ''.join(
+        f'''
+        <div class="flash {"error" if kind=="error" else ""}">
+            {msg}
+        </div>
+        '''
+        for kind, msg in session.pop('_flashes', [])
+    )
+
+    return render_template_string(
+        f'''
+        <!doctype html>
+        <html lang="pt-BR">
+
+        <head>
+            <meta charset="utf-8">
+            <meta
+                name="viewport"
+                content="width=device-width,initial-scale=1"
+            >
+            <title>{title} · CENTRAL LASTRO</title>
+            <style>{CSS}</style>
+        </head>
+
+        <body>
+
+        <div class="layout">
+
+            <aside class="side">
+
+                <div class="brand">
+                    <b>LASTRO</b>
+                    <small>CENTRAL ADMINISTRATIVA</small>
+                </div>
+
+                <nav class="nav">
+                    {nav}
+                </nav>
+
+                <a
+                    class="btn secondary"
+                    style="width:100%;margin-top:22px"
+                    href="{url_for('logout')}"
+                >
+                    Sair
+                </a>
+
+            </aside>
+
+            <main class="main">
+
+                <div class="top">
+                    <h1>{title}</h1>
+                    <span class="pill">
+                        {session.get('role','')}
+                    </span>
+                </div>
+
+                {messages}
+
+                {body}
+
+            </main>
+
+        </div>
+
+        </body>
+        </html>
+        '''
+    )
+
 
 # ============================================================
 # HEALTH
@@ -1257,7 +1282,7 @@ def login():
                     <b>LASTRO</b>
 
                     <small>
-                        EMPRESA LASTRO
+                        CENTRAL PRIVADA DE GESTÃO
                     </small>
 
                 </div>
@@ -1338,73 +1363,89 @@ def logout():
 
 
 # ============================================================
-# PERFIL / FOTO DO USUÁRIO
-# ============================================================
-
-@app.route('/profile', methods=['GET','POST'])
-@auth
-def profile():
-    row=getall('''SELECT u.*,m.passport member_passport FROM users u LEFT JOIN members m ON lower(m.name)=lower(u.name) WHERE u.id=?''',(session.get('uid'),))
-    if not row: abort(404)
-    u=row[0]
-    if request.method=='POST':
-        avatar=request.files.get('avatar'); passport=request.form.get('passport','').strip()
-        try: passport_value=int(passport) if passport else None
-        except ValueError:
-            flash('Passaporte inválido.','error'); return redirect(url_for('profile'))
-        avatar_name=u['avatar'] or ''
-        if avatar and avatar.filename:
-            ext=Path(secure_filename(avatar.filename)).suffix.lower().lstrip('.')
-            if ext not in ALLOWED_EXT:
-                flash('Use JPG, PNG ou WEBP.','error'); return redirect(url_for('profile'))
-            avatar_name=f'profile_{session["uid"]}_{uuid.uuid4().hex}.{ext}'; avatar.save(UPLOADS/avatar_name)
-            old=u['avatar'] or ''
-            if old and old!=avatar_name:
-                old_path=UPLOADS/secure_filename(old)
-                if old_path.exists():
-                    try: old_path.unlink()
-                    except OSError: pass
-        execute('UPDATE users SET passport=?,avatar=? WHERE id=?',(passport_value,avatar_name,session.get('uid')))
-        audit('PERFIL_ATUALIZADO',str(session.get('uid'))); flash('Perfil atualizado.')
-        return redirect(url_for('profile'))
-    passport=u['passport'] or u['member_passport'] or ''
-    avatar_html=(f'<img class="profile-avatar-large" src="{url_for("avatar_file",user_id=session.get("uid"))}" alt="Foto do perfil">' if u['avatar'] else f'<div class="profile-avatar-large">{(u["name"] or "?")[0].upper()}</div>')
-    return shell('Meu perfil',f'''<div class="card profile-card"><div>{avatar_html}</div><div><div class="label">Conta</div><h2 style="margin-top:7px">{u['name']}</h2><p class="muted">{u['role']} · Passaporte {passport or 'não definido'}</p><form method="post" enctype="multipart/form-data" class="formgrid" style="margin-top:18px"><input type="hidden" name="csrf" value="{csrf()}"><div class="field"><label>Passaporte</label><input class="input" name="passport" value="{passport}" inputmode="numeric" placeholder="Ex.: 6027"></div><div class="field"><label>Foto do perfil</label><input class="input" type="file" name="avatar" accept="image/jpeg,image/png,image/webp"></div><button class="btn full">Salvar perfil</button></form></div></div>''')
-
-@app.get('/avatar/<int:user_id>')
-@auth
-def avatar_file(user_id):
-    row=getall('SELECT avatar FROM users WHERE id=?',(user_id,))
-    if not row or not row[0]['avatar']: abort(404)
-    name=secure_filename(row[0]['avatar']); path=UPLOADS/name
-    if not path.exists(): abort(404)
-    return send_file(path)
-
-
-# ============================================================
 # DASHBOARD
 # ============================================================
 
 @app.get('/dashboard')
 @auth
 def dashboard():
-    ws=monday().isoformat(); we=(monday()+timedelta(days=6)).isoformat()
-    week_total=getall('SELECT COALESCE(SUM(action_value),0) v FROM action_records WHERE week_start=?',(ws,))[0]['v']
-    family_total=getall("SELECT COALESCE(SUM(family_value),0) v FROM action_records WHERE week_start=? AND result_status='GANHA'",(ws,))[0]['v']
-    member_total=getall("SELECT COALESCE(SUM(participant_pool),0) v FROM action_records WHERE week_start=? AND result_status='GANHA'",(ws,))[0]['v']
-    actions_count=getall('SELECT COUNT(*) n FROM action_records WHERE week_start=?',(ws,))[0]['n']
-    wins=getall("SELECT COUNT(*) n FROM action_records WHERE week_start=? AND result_status='GANHA'",(ws,))[0]['n']
-    losses=getall("SELECT COUNT(*) n FROM action_records WHERE week_start=? AND result_status='PERDIDA'",(ws,))[0]['n']
-    participants=getall('''SELECT COUNT(DISTINCT ap.member_id) n FROM action_participants ap JOIN action_records ar ON ar.id=ap.record_id WHERE ar.week_start=? AND ap.member_id IS NOT NULL''',(ws,))[0]['n']
-    farm_week=getall('SELECT COALESCE(SUM(quantity),0) v FROM farms WHERE date(created_at) BETWEEN date(?) AND date(?)',(ws,we))[0]['v']
-    members_count=getall('SELECT COUNT(*) n FROM members WHERE active=1')[0]['n']
-    top_member=getall('''SELECT m.name,COUNT(ap.id) qty FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id LEFT JOIN action_records ar ON ar.id=ap.record_id AND ar.result_status='GANHA' WHERE m.active=1 GROUP BY m.id ORDER BY qty DESC,m.name LIMIT 1''')
-    top_name=top_member[0]['name'] if top_member and top_member[0]['qty'] else 'Ainda sem destaque'
-    info=[('Movimentado na semana',money(week_total),'Ações registradas nesta semana'),('Parte da família',money(family_total),'50% das ações ganhas'),('Distribuído aos membros',money(member_total),'Pool dos participantes'),('Ações realizadas',actions_count,'Total registrado na semana'),('Ações ganhas',wins,'Resultado positivo'),('Ações perdidas',losses,'Resultado negativo'),('Participantes',participants,'Membros que participaram'),('Farm na semana',f'{farm_week:g}','Quantidade registrada no período'),('Membros ativos',members_count,'Base atual da hierarquia'),('Membro destaque',top_name,'Mais participações em ações')]
-    panels=''.join(f'''<div class="card"><div class="label">{label}</div><div class="metric" style="font-size:{'19px' if label=='Membro destaque' else '27px'}">{value}</div><p class="muted">{desc}</p></div>''' for label,value,desc in info)
-    return shell('Painel',f'''<div class="grid">{panels}</div>''')
-
-
+    ws = monday().isoformat()
+    w = getall('''
+        SELECT COUNT(*) total,
+        COALESCE(SUM(CASE WHEN status='GANHADA' THEN 1 ELSE 0 END),0) won,
+        COALESCE(SUM(CASE WHEN status='PERDIDA' THEN 1 ELSE 0 END),0) lost,
+        COALESCE(SUM(CASE WHEN status='GANHADA' THEN action_value ELSE 0 END),0) total_value,
+        COALESCE(SUM(CASE WHEN status='GANHADA' THEN family_value ELSE 0 END),0) family_value,
+        COALESCE(SUM(CASE WHEN status='GANHADA' THEN participant_pool ELSE 0 END),0) member_value
+        FROM action_records WHERE week_start=?
+    ''', (ws,))[0]
+    members = getall("SELECT COUNT(*) n FROM members WHERE active=1")[0]['n']
+    participants = getall('''
+        SELECT COUNT(DISTINCT ap.member_id) n
+        FROM action_participants ap
+        JOIN action_records ar ON ar.id=ap.record_id
+        WHERE ar.week_start=? AND ap.member_id IS NOT NULL
+    ''', (ws,))[0]['n']
+    farm = getall('''
+        SELECT COALESCE(SUM(quantity),0) n
+        FROM farms WHERE date(created_at)>=date(?)
+    ''', (ws,))[0]['n']
+    won = int(w['won'] or 0)
+    lost = int(w['lost'] or 0)
+    results = won + lost
+    pct = round(won * 100 / results) if results else 0
+    cards = ''.join(
+        f'''<div class="card"><div class="label">{a}</div><div class="metric">{b}</div><div class="muted" style="margin-top:6px;font-size:12px">{c}</div></div>'''
+        for a,b,c in [
+            ('Movimentado · semana', money(w['total_value']), 'Somente ações ganhas'),
+            ('Parte da família', money(w['family_value']), '50% das ações ganhas'),
+            ('Distribuído aos membros', money(w['member_value']), '50% das ações ganhas'),
+            ('Membros ativos', members, f'{participants} participaram esta semana')
+        ]
+    )
+    recent = getall('''
+        SELECT ar.id,ar.created_at,ar.action_value,ar.status,a.name
+        FROM action_records ar JOIN actions a ON a.id=ar.action_id
+        ORDER BY ar.id DESC LIMIT 8
+    ''')
+    recent_rows = ''.join(
+        f'''<tr><td>{r['name']}</td><td>{r['created_at'][:10]}</td><td>{money(r['action_value'])}</td><td><span class="pill">{r['status']}</span></td><td><a href="{url_for('result',record_id=r['id'])}">Ver</a></td></tr>'''
+        for r in recent
+    ) or '<tr><td colspan="5" class="muted">Nenhuma ação registrada ainda.</td></tr>'
+    top = getall('''
+        SELECT m.id,m.name,m.cargo,COUNT(ap.id) qty,
+        COALESCE(SUM(CASE WHEN ar.status='GANHADA' THEN ap.value_received ELSE 0 END),0) received
+        FROM members m
+        LEFT JOIN action_participants ap ON ap.member_id=m.id
+        LEFT JOIN action_records ar ON ar.id=ap.record_id
+        WHERE m.active=1
+        GROUP BY m.id
+        ORDER BY qty DESC,received DESC,m.name
+        LIMIT 5
+    ''')
+    top_rows = ''.join(
+        f'''<tr><td><a href="{url_for('member_profile',member_id=m['id'])}">{m['name']}</a></td><td>{m['cargo']}</td><td>{m['qty']}</td><td>{money(m['received'])}</td></tr>'''
+        for m in top
+    ) or '<tr><td colspan="4" class="muted">Ainda não há participações.</td></tr>'
+    action_cards = []
+    for a in getall('SELECT * FROM actions WHERE active=1 ORDER BY id'):
+        n = getall('SELECT COUNT(*) n FROM action_records WHERE action_id=? AND week_start=?', (a['id'], ws))[0]['n']
+        lim = a['weekly_limit']
+        lock = lim is not None and n >= lim
+        action_cards.append(
+            f'''<div class="card"><span class="pill">{n}/{lim if lim is not None else '∞'}</span><h2>{a['name']}</h2><p class="muted">Valor: {money(a['action_value']) if a['action_value'] else 'Ainda não definido'}</p><a class="btn {'secondary' if lock else ''}" href="{url_for('action_detail',action_id=a['id'])}">{'Limite atingido' if lock else 'Abrir ação'}</a></div>'''
+        )
+    return shell('Central de Inteligência', f'''
+    <div class="card"><div style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap"><div><div class="label">PAINEL PRINCIPAL</div><h1 style="margin:4px 0">Central de Inteligência</h1><p class="muted" style="margin:0">Dashboard inteligente · semana iniciada em {ws}</p></div><span class="pill">ATUALIZADO AUTOMATICAMENTE</span></div></div>
+    <div class="grid section">{cards}</div>
+    <div class="cards3 section">
+      <div class="card"><div class="label">RESULTADO DA SEMANA</div><div style="font-size:28px;font-weight:800;margin:8px 0">{won} ganhada(s)</div><div class="muted">{lost} perdida(s) · {w['total']} registrada(s)</div><div style="height:12px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:16px"><div style="width:{pct}%;height:100%;background:#d6b25e"></div></div><div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px"><span>Ganhas {pct}%</span><span>Perdidas {100-pct if results else 0}%</span></div></div>
+      <div class="card"><div class="label">DIVISÃO FINANCEIRA</div><div style="font-size:26px;font-weight:800;margin-top:12px">50% / 50%</div><div class="muted" style="margin-top:8px">Família: {money(w['family_value'])}</div><div class="muted">Membros: {money(w['member_value'])}</div></div>
+      <div class="card"><div class="label">INDICADORES</div><div style="margin-top:12px;line-height:1.9">Membros ativos: {members}<br>Participantes na semana: {participants}<br>Farm na semana: {farm:g}<br>Movimentado na semana: {money(w['total_value'])}</div></div>
+    </div>
+    <div class="cards3 section"><div class="card tablewrap"><h2>Atividade recente</h2><table class="table"><tr><th>Ação</th><th>Data</th><th>Valor</th><th>Resultado</th><th></th></tr>{recent_rows}</table></div><div class="card tablewrap"><h2>Destaques dos membros</h2><table class="table"><tr><th>Membro</th><th>Cargo</th><th>Participações</th><th>Recebido</th></tr>{top_rows}</table></div></div>
+    <div class="section"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><h2 style="margin:0">Ações da semana</h2><a class="btn secondary" href="{url_for('ranking')}">Ver ranking completo</a></div><div class="cards3" style="margin-top:14px">{''.join(action_cards)}</div></div>
+    ''')
 # ============================================================
 # FARM
 # ============================================================
@@ -1971,12 +2012,104 @@ def chests():
 @app.get('/actions')
 @auth
 def actions():
-    ws=monday().isoformat(); cards=[]
-    for a in getall('SELECT * FROM actions WHERE active=1 ORDER BY id'):
-        used=getall('SELECT COUNT(*) n FROM action_records WHERE action_id=? AND week_start=?',(a['id'],ws))[0]['n']
-        lim=a['weekly_limit']; data=json.loads(a['rules_json']); badge=f'{used}/{lim}' if lim is not None else f'{used}/∞'; disabled=lim is not None and used>=lim
-        cards.append(f'''<div class="card action-card" data-action-name="{a['name'].lower()}"><span class="pill">{badge}</span><h2>{a['name']}</h2><p class="muted">Valor: {money(a['action_value']) if a['action_value'] else 'A definir'}</p><p class="muted">Bandidos: {data.get('bandits','—')} · Policiais: {data.get('police','—')}</p><a class="btn {'secondary' if disabled else ''}" href="{url_for('action_detail',action_id=a['id'])}">{'Limite semanal atingido' if disabled else 'Abrir ação'}</a></div>''')
-    return shell('Ações',f'''<div class="card search-actions"><div class="searchbox"><input id="actionSearch" class="input" type="search" placeholder="Buscar uma ação pelo nome..." oninput="filterActions()"><span class="pill" style="align-self:center">Todas as ações</span></div></div><div class="cards3" id="actionGrid">{''.join(cards)}</div><script>function filterActions(){{const term=document.getElementById('actionSearch').value.trim().toLowerCase();document.querySelectorAll('.action-card').forEach(card=>card.classList.toggle('hidden',!!term&&!card.dataset.actionName.includes(term)));}}</script>''')
+
+    ws = monday().isoformat()
+
+    cards = []
+
+    for a in getall(
+        '''
+        SELECT *
+        FROM actions
+        WHERE active=1
+        ORDER BY id
+        '''
+    ):
+
+        used = getall(
+            '''
+            SELECT COUNT(*) n
+            FROM action_records
+            WHERE action_id=?
+            AND week_start=?
+            ''',
+            (
+                a['id'],
+                ws
+            )
+        )[0]['n']
+
+        lim = a['weekly_limit']
+
+        data = json.loads(
+            a['rules_json']
+        )
+
+        badge = (
+            f'{used}/{lim}'
+            if lim is not None
+            else
+            f'{used}/∞'
+        )
+
+        disabled = (
+            lim is not None
+            and used >= lim
+        )
+
+        cards.append(
+            f'''
+            <div class="card">
+
+                <span class="pill">
+                    {badge}
+                </span>
+
+                <h2>
+                    {a["name"]}
+                </h2>
+
+                <p class="muted">
+                    Valor:
+                    {
+                        money(a["action_value"])
+                        if a["action_value"]
+                        else
+                        "A definir"
+                    }
+                </p>
+
+                <p class="muted">
+                    Participantes: {data.get("bandits","—")}
+                </p>
+
+                <a
+                    class="btn {"secondary" if disabled else ""}"
+                    href="{url_for(
+                        "action_detail",
+                        action_id=a["id"]
+                    )}"
+                >
+                    {
+                        "Limite semanal atingido"
+                        if disabled
+                        else
+                        "Registrar participação"
+                    }
+                </a>
+
+            </div>
+            '''
+        )
+
+    return shell(
+        'Ações',
+        f'''
+        <div class="cards3">
+            {"".join(cards)}
+        </div>
+        '''
+    )
 
 
 # ============================================================
@@ -2069,23 +2202,19 @@ def action_detail(action_id):
 
         for mid in member_ids:
 
-            participant_eligible = request.form.get(
-                f'eligible_{mid}',
-                '0'
-            ) == '1'
+            brought_armament = request.form.get(
+                f'armament_{mid}',
+                'NAO'
+            ).upper() == 'SIM'
 
-            side = request.form.get(
-                f'side_{mid}',
-                'BANDIDO'
-            )
 
             participants.append(
                 (
                     'member',
                     int(mid),
                     None,
-                    side,
-                    participant_eligible
+                    'BANDIDO',
+                    brought_armament
                 )
             )
 
@@ -2094,15 +2223,11 @@ def action_detail(action_id):
             if not name.strip():
                 continue
 
-            participant_eligible = request.form.get(
-                f'external_eligible_{i}',
-                '0'
-            ) == '1'
+            brought_armament = request.form.get(
+                f'external_armament_{i}',
+                'NAO'
+            ).upper() == 'SIM'
 
-            side = request.form.get(
-                f'external_side_{i}',
-                'BANDIDO'
-            )
 
             participants.append(
                 (
@@ -2117,8 +2242,8 @@ def action_detail(action_id):
                         if i < len(ext_fams)
                         else ''
                     ),
-                    side,
-                    participant_eligible
+                    'BANDIDO',
+                    brought_armament
                 )
             )
 
@@ -2133,21 +2258,7 @@ def action_detail(action_id):
                 request.url
             )
 
-        result_status=request.form.get('result_status','GANHA').upper()
-        if result_status not in {'GANHA','PERDIDA'}:
-            result_status='GANHA'
-
-        b = sum(
-            1
-            for x in participants
-            if x[3] == 'BANDIDO'
-        )
-
-        p = sum(
-            1
-            for x in participants
-            if x[3] == 'POLICIAL'
-        )
+        b = len(participants)
 
         def check_count(rule, val):
 
@@ -2186,28 +2297,14 @@ def action_detail(action_id):
 
             return True
 
-        if (
-            not check_count(
-                rules.get('bandits'),
-                b
-            )
-            or
-            not check_count(
-                rules.get('police'),
-                p
-            )
-        ):
+        if not check_count(rules.get('bandits'), b):
+            flash(f'Quantidade inválida. Participantes: {b}.', 'error')
+            return redirect(request.url)
 
-            flash(
-                f'Quantidade inválida. '
-                f'Bandidos: {b}. '
-                f'Policiais: {p}.',
-                'error'
-            )
-
-            return redirect(
-                request.url
-            )
+        result_status = request.form.get('status', 'GANHADA').upper()
+        if result_status not in ('GANHADA', 'PERDIDA'):
+            flash('Resultado da ação inválido.', 'error')
+            return redirect(request.url)
 
         c = conn()
 
@@ -2242,21 +2339,10 @@ def action_detail(action_id):
                 a['action_value'] or 0
             )
 
-            family = round(
-                value * .5,
-                2
-            )
+            family = round(value * .5, 2) if result_status == 'GANHADA' else 0
+            pool = round(value - family, 2) if result_status == 'GANHADA' else 0
 
-            pool = round(
-                value - family,
-                2
-            )
-
-            eligible = [
-                x
-                for x in participants
-                if x[4]
-            ]
+            eligible = participants if result_status == 'GANHADA' else []
 
             cents = int(
                 round(pool * 100)
@@ -2286,7 +2372,7 @@ def action_detail(action_id):
                     rules_snapshot,
                     created_by,
                     created_at,
-                    result_status
+                    status
                 )
                 VALUES(?,?,?,?,?,?,?,?,?)
                 ''',
@@ -2306,49 +2392,51 @@ def action_detail(action_id):
                 )
             ).lastrowid
 
-            c.execute(
-                '''
-                INSERT INTO financial_transactions(
-                    record_id,
-                    type,
-                    amount,
-                    description,
-                    created_at
-                )
-                VALUES(?,?,?,?,?)
-                ''',
-                (
-                    rid,
-                    'FAMILIA',
-                    family,
-                    '50% da família',
-                    now()
-                )
-            )
+            if result_status == 'GANHADA':
 
-            c.execute(
-                '''
-                INSERT INTO financial_transactions(
-                    record_id,
-                    type,
-                    amount,
-                    description,
-                    created_at
+                c.execute(
+                    '''
+                    INSERT INTO financial_transactions(
+                        record_id,
+                        type,
+                        amount,
+                        description,
+                        created_at
+                    )
+                    VALUES(?,?,?,?,?)
+                    ''',
+                    (
+                        rid,
+                        'FAMILIA',
+                        family,
+                        '50% da família',
+                        now()
+                    )
                 )
-                VALUES(?,?,?,?,?)
-                ''',
-                (
-                    rid,
-                    'PARTICIPANTES',
-                    pool,
-                    '50% distribuídos entre elegíveis',
-                    now()
+
+                c.execute(
+                    '''
+                    INSERT INTO financial_transactions(
+                        record_id,
+                        type,
+                        amount,
+                        description,
+                        created_at
+                    )
+                    VALUES(?,?,?,?,?)
+                    ''',
+                    (
+                        rid,
+                        'PARTICIPANTES',
+                        pool,
+                        '50% distribuídos entre elegíveis',
+                        now()
+                    )
                 )
-            )
 
             idx = 0
 
-            for typ, mid, ext, side, participant_eligible in participants:
+            for typ, mid, ext, side, brought_armament in participants:
 
                 eid = None
 
@@ -2366,7 +2454,7 @@ def action_detail(action_id):
                         ext
                     ).lastrowid
 
-                ok = bool(participant_eligible)
+                ok = result_status == 'GANHADA'
 
                 amount = (
                     each
@@ -2400,13 +2488,13 @@ def action_detail(action_id):
                         mid,
                         eid,
                         side,
-                        '',
+                        'SIM' if brought_armament else 'NAO',
                         int(ok),
                         amount,
                         ''
                         if ok
                         else
-                        'Não elegível para a divisão',
+                        ('Ação perdida' if result_status == 'PERDIDA' else 'Não elegível para a divisão'),
                         now()
                     )
                 )
@@ -2543,38 +2631,16 @@ def action_detail(action_id):
                         style="margin-top:10px"
                     >
 
-                        <div class="field">
-
-                            <label>
-                                Equipe
-                            </label>
-
-                            <select
-                                class="select"
-                                data-side
-                            >
-
-                                <option>
-                                    BANDIDO
-                                </option>
-
-                                <option>
-                                    POLICIAL
-                                </option>
-
-                            </select>
-
-                        </div>
 
                         <div class="field">
 
                             <label>
-                                Participação na divisão
+                                Trouxe armamento?
                             </label>
 
                             <select
                                 class="select"
-                                data-eligible
+                                data-armament
                             >
 
                                 <option value="0">Não elegível</option>
@@ -2608,21 +2674,13 @@ def action_detail(action_id):
                 '.membercard'
             );
 
-        let side =
-            r.querySelector(
-                '[data-side]'
-            );
-
         let eligible =
             r.querySelector(
-                '[data-eligible]'
+                '[data-armament]'
             );
 
-        side.name =
-            'side_' + s.value;
-
         eligible.name =
-            'eligible_' + s.value;
+            'armament_' + s.value;
 
     }}
 
@@ -2684,38 +2742,16 @@ def action_detail(action_id):
 
                         </div>
 
-                        <div class="field">
-
-                            <label>
-                                Equipe
-                            </label>
-
-                            <select
-                                class="select"
-                                name="external_side_${{i}}"
-                            >
-
-                                <option>
-                                    BANDIDO
-                                </option>
-
-                                <option>
-                                    POLICIAL
-                                </option>
-
-                            </select>
-
-                        </div>
 
                         <div class="field">
 
                             <label>
-                                Participação na divisão
+                                Trouxe armamento?
                             </label>
 
                             <select
                                 class="select"
-                                name="external_eligible_${{i}}"
+                                name="external_armament_${{i}}"
                             >
 
                                 <option value="0">Não elegível</option>
@@ -2843,8 +2879,21 @@ def action_detail(action_id):
 
             </div>
 
-            <div class="card section"><div class="field"><label>Status da ação</label><select class="select" name="result_status"><option value="GANHA">GANHA</option><option value="PERDIDA">PERDIDA</option></select></div></div>
-            <button class="btn section" style="width:100%">Finalizar ação</button>
+            <div class="field section">
+                <label>Resultado da ação</label>
+                <select class="select" name="status" required>
+                    <option value="GANHADA">Ganhada</option>
+                    <option value="PERDIDA">Perdida</option>
+                </select>
+                <span class="muted">Ações perdidas ficam no histórico, mas não movimentam o painel financeiro.</span>
+            </div>
+
+            <button
+                class="btn section"
+                style="width:100%"
+            >
+                Finalizar ação
+            </button>
 
         </form>
 
@@ -2881,9 +2930,6 @@ def result(record_id):
         abort(404)
 
     r = rr[0]
-    result_status=(r['result_status'] or 'GANHA').upper()
-    result_class='ganha' if result_status=='GANHA' else 'perdida'
-    result_label='AÇÃO GANHA' if result_status=='GANHA' else 'AÇÃO PERDIDA'
 
     people = getall(
         '''
@@ -2962,7 +3008,6 @@ def result(record_id):
     return shell(
         'Resultado · ' + r['name'],
         f'''
-        <div class="status-banner {result_class}"><div><div class="label">Resultado da ação</div><div class="status-title">{result_label}</div></div><span class="pill">{r['name']}</span></div>
         <div class="grid">
 
             <div class="card">
@@ -3087,7 +3132,6 @@ def ranking():
         GROUP BY m.id
 
         ORDER BY farm DESC,name
-        LIMIT 10
         '''
     )
 
@@ -3110,7 +3154,6 @@ def ranking():
         GROUP BY m.id
 
         ORDER BY qty DESC,name
-        LIMIT 10
         '''
     )
 
@@ -3207,16 +3250,112 @@ def ranking():
 @app.get('/members')
 @auth
 def members():
-    term=request.args.get('q','').strip()
-    rows=getall('''SELECT * FROM members WHERE active=1 AND (name LIKE ? OR CAST(passport AS TEXT) LIKE ?) ORDER BY CASE cargo WHEN 'LÍDER' THEN 1 WHEN 'VICE-LÍDER' THEN 2 WHEN 'GERENTE' THEN 3 WHEN 'ELITE.AI' THEN 4 ELSE 5 END,name''',(f'%{term}%',f'%{term}%'))
-    stat_rows=getall('''SELECT m.id,COUNT(DISTINCT ap.id) action_qty,COALESCE((SELECT SUM(f2.quantity) FROM farms f2 WHERE f2.member_id=m.id),0) farm_qty FROM members m LEFT JOIN action_participants ap ON ap.member_id=m.id WHERE m.active=1 GROUP BY m.id''')
-    stats={r['id']:r for r in stat_rows}; tr=[]
+    term = request.args.get('q', '').strip()
+
+    rows = getall(
+        '''
+        SELECT *
+        FROM members
+        WHERE active=1
+          AND (name LIKE ? OR CAST(passport AS TEXT) LIKE ?)
+        ORDER BY
+            CASE cargo
+                WHEN 'LÍDER' THEN 1
+                WHEN 'VICE-LÍDER' THEN 2
+                WHEN 'GERENTE' THEN 3
+                ELSE 4
+            END,
+            name
+        ''',
+        (f'%{term}%', f'%{term}%')
+    )
+
+    stat_rows = getall(
+        '''
+        SELECT
+            m.id,
+            COUNT(DISTINCT ap.id) action_qty,
+            COALESCE(SUM(f.quantity),0) farm_qty
+        FROM members m
+        LEFT JOIN action_participants ap ON ap.member_id=m.id
+        LEFT JOIN farms f ON f.member_id=m.id
+        WHERE m.active=1
+        GROUP BY m.id
+        '''
+    )
+    stats = {r['id']: r for r in stat_rows}
+
+    tr = []
     for m in rows:
-        st=stats.get(m['id']); action_qty=st['action_qty'] if st else 0; farm_qty=st['farm_qty'] if st else 0; cargo='Elite' if m['cargo']=='ELITE.AI' else m['cargo']; edit=f'<a href="{url_for("member_edit",member_id=m["id"])}">Editar</a>' if session.get('role')=='ADMINISTRADOR' else '—'
-        tr.append(f'''<tr><td><strong>{m['name']}</strong></td><td>{m['passport'] or '—'}</td><td><span class="pill">{cargo}</span></td><td>{action_qty}</td><td>{farm_qty:g}</td><td>{edit}</td></tr>''')
-    return shell('Hierarquia',f'''<div class="card"><form class="searchbox" method="get"><input class="input" name="q" value="{term}" placeholder="Pesquisar por nome ou passaporte"><button class="btn">Pesquisar</button></form></div><div class="card section tablewrap"><table class="table"><tr><th>Nome</th><th>Passaporte</th><th>Cargo</th><th>Ações</th><th>Farm</th><th></th></tr>{''.join(tr)}</table></div>''')
+        st = stats.get(m['id'])
+        action_qty = st['action_qty'] if st else 0
+        farm_qty = st['farm_qty'] if st else 0
+        edit = (
+            f'<a href="{url_for("member_edit", member_id=m["id"])}">Editar</a>'
+            if session.get('role') == 'ADMINISTRADOR'
+            else '—'
+        )
+        tr.append(
+            f'''<tr>
+                <td><a href="{url_for('member_profile', member_id=m['id'])}">{m['name']}</a></td>
+                <td>{m['passport'] or '—'}</td>
+                <td>{m['cargo']}</td>
+                <td>{action_qty}</td>
+                <td>{farm_qty:g}</td>
+                <td>{edit}</td>
+            </tr>'''
+        )
+
+    return shell(
+        'Hierarquia',
+        f'''<div class="card">
+            <form class="searchbox" method="get">
+                <input class="input" name="q" value="{term}" placeholder="Pesquisar por nome ou passaporte">
+                <button class="btn">Pesquisar</button>
+            </form>
+        </div>
+        <div class="card section tablewrap">
+            <table class="table">
+                <tr><th>Nome</th><th>Passaporte</th><th>Cargo</th><th>Ações</th><th>Farm</th><th></th></tr>
+                {''.join(tr)}
+            </table>
+        </div>'''
+    )
 
 
+# ============================================================
+# PERFIL DO MEMBRO
+# ============================================================
+@app.get('/members/<int:member_id>')
+@auth
+def member_profile(member_id):
+    rows = getall('SELECT * FROM members WHERE id=? AND active=1', (member_id,))
+    if not rows:
+        abort(404)
+    m = rows[0]
+    st = getall('''
+        SELECT COUNT(ap.id) participations,
+        COALESCE(SUM(CASE WHEN ar.status='GANHADA' THEN 1 ELSE 0 END),0) won,
+        COALESCE(SUM(CASE WHEN ar.status='PERDIDA' THEN 1 ELSE 0 END),0) lost,
+        COALESCE(SUM(CASE WHEN ar.status='GANHADA' THEN ap.value_received ELSE 0 END),0) received,
+        (SELECT COALESCE(SUM(quantity),0) FROM farms WHERE member_id=m.id) farm_qty
+        FROM members m
+        LEFT JOIN action_participants ap ON ap.member_id=m.id
+        LEFT JOIN action_records ar ON ar.id=ap.record_id
+        WHERE m.id=? GROUP BY m.id
+    ''', (member_id,))[0]
+    hist = getall('''
+        SELECT ar.id,ar.created_at,ar.status,ap.value_received,ap.weapon,a.name action_name
+        FROM action_participants ap
+        JOIN action_records ar ON ar.id=ap.record_id
+        JOIN actions a ON a.id=ar.action_id
+        WHERE ap.member_id=? ORDER BY ar.id DESC LIMIT 100
+    ''', (member_id,))
+    rows_html = ''.join(
+        f'''<tr><td>{h['action_name']}</td><td>{h['created_at'][:10]}</td><td><span class="pill">{h['status']}</span></td><td>{money(h['value_received']) if h['status']=='GANHADA' else 'R$ 0,00'}</td><td>{'Sim' if h['weapon']=='SIM' else 'Não'}</td><td><a href="{url_for('result',record_id=h['id'])}">Ver ação</a></td></tr>'''
+        for h in hist
+    ) or '<tr><td colspan="6" class="muted">Nenhuma participação registrada.</td></tr>'
+    return shell('Perfil · '+m['name'], f'''<div class="card"><div style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap"><div><div class="label">PERFIL DO MEMBRO</div><h1 style="margin:4px 0">{m['name']}</h1><p class="muted" style="margin:0">Passaporte: {m['passport'] or '—'} · {m['cargo']}</p></div><a class="btn secondary" href="{url_for('members')}">Voltar</a></div></div><div class="grid section"><div class="card"><div class="label">PARTICIPAÇÕES</div><div class="metric">{st['participations']}</div></div><div class="card"><div class="label">GANHADAS</div><div class="metric">{st['won']}</div></div><div class="card"><div class="label">PERDIDAS</div><div class="metric">{st['lost']}</div></div><div class="card"><div class="label">TOTAL RECEBIDO</div><div class="metric">{money(st['received'])}</div></div></div><div class="cards3 section"><div class="card"><div class="label">FARM REGISTRADO</div><div class="metric">{st['farm_qty']:g}</div></div><div class="card"><div class="label">ARMAMENTO</div><div style="font-size:22px;font-weight:800;margin-top:8px">No histórico</div><div class="muted">Cada participação mostra Sim/Não.</div></div><div class="card"><div class="label">OBSERVAÇÕES</div><div class="muted" style="margin-top:10px">{m['notes'] or 'Nenhuma observação cadastrada.'}</div></div></div><div class="card section tablewrap"><h2>Histórico de ações</h2><table class="table"><tr><th>Ação</th><th>Data</th><th>Resultado</th><th>Recebido</th><th>Armamento</th><th></th></tr>{rows_html}</table></div>''')
 # ============================================================
 # EDITAR MEMBRO
 # ============================================================
@@ -3302,8 +3441,19 @@ def member_edit(member_id):
         )
 
     cargo_options = ''.join(
-        f'''<option value="{r}" {"selected" if r == m["cargo"] else ""}>{display}</option>'''
-        for r,display in [('LÍDER','LÍDER'),('VICE-LÍDER','VICE-LÍDER'),('GERENTE','GERENTE'),('ELITE.AI','Elite'),('MEMBRO','MEMBRO')]
+        f'''
+        <option
+            {"selected" if r == m["cargo"] else ""}
+        >
+            {r}
+        </option>
+        '''
+        for r in [
+            'LÍDER',
+            'VICE-LÍDER',
+            'GERENTE',
+            'MEMBRO'
+        ]
     )
 
     return shell(
