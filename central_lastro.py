@@ -656,6 +656,8 @@ def setup_request():
             (default_value, t, action_name)
         )
 
+    c.execute("UPDATE action_records SET status='GANHADA' WHERE status='FINALIZADA'")
+
     c.commit()
     c.close()
 
@@ -1374,6 +1376,7 @@ def dashboard():
         '''
         SELECT COALESCE(SUM(action_value),0) v
         FROM action_records
+        WHERE status='GANHADA'
         '''
     )[0]['v']
 
@@ -1382,6 +1385,7 @@ def dashboard():
         SELECT COALESCE(SUM(family_value),0) v
         FROM action_records
         WHERE week_start=?
+        AND status='GANHADA'
         ''',
         (ws,)
     )[0]['v']
@@ -1440,6 +1444,18 @@ def dashboard():
             )
         ]
     )
+
+    week_participants = getall("SELECT COALESCE(SUM(participant_pool),0) v FROM action_records WHERE week_start=? AND status='GANHADA'", (ws,))[0]['v']
+    week_won = getall("SELECT COUNT(*) n FROM action_records WHERE week_start=? AND status='GANHADA'", (ws,))[0]['n']
+    week_lost = getall("SELECT COUNT(*) n FROM action_records WHERE week_start=? AND status='PERDIDA'", (ws,))[0]['n']
+    total_week_actions = week_won + week_lost
+    won_pct = round(week_won*100/total_week_actions,1) if total_week_actions else 0
+    lost_pct = round(week_lost*100/total_week_actions,1) if total_week_actions else 0
+    family_total = float(week_total or 0)
+    participant_total = float(week_participants or 0)
+    financial_total = family_total + participant_total
+    family_pct = round(family_total*100/financial_total,1) if financial_total else 50
+    participant_pct = round(participant_total*100/financial_total,1) if financial_total else 50
 
     action_cards = []
 
@@ -1518,11 +1534,7 @@ def dashboard():
             {cards}
         </div>
 
-        <div class="section">
-
-            <h2>
-                Ações da semana
-            </h2>
+        <div class="section"><div class="cards3"><div class="card"><div class="label">Resultado das ações · semana</div><div style="height:18px;background:#211b0c;border-radius:999px;overflow:hidden;margin:14px 0 8px"><div style="height:100%;width:{won_pct}%;background:var(--gold);float:left"></div><div style="height:100%;width:{lost_pct}%;background:#71312e;float:left"></div></div><div class="split"><span class="status-ok">Ganhadas: {week_won} · {won_pct}%</span><span class="status-no">Perdidas: {week_lost} · {lost_pct}%</span></div></div><div class="card"><div class="label">Divisão financeira · ganhadas</div><div style="width:150px;height:150px;border-radius:50%;margin:16px auto;background:conic-gradient(var(--gold) 0 {family_pct}%, #5b4a22 {family_pct}% 100%);display:grid;place-items:center"><div style="width:92px;height:92px;border-radius:50%;background:#0b0b09;display:grid;place-items:center;text-align:center;font-weight:800">{family_pct}%<br><span class="muted" style="font-size:10px">FAMÍLIA</span></div></div><div class="split"><span>Família: {family_pct}%</span><span>Participantes: {participant_pct}%</span></div></div><div class="card"><div class="label">Valores da semana</div><p>Família: <b>{money(family_total)}</b></p><p>Participantes: <b>{money(participant_total)}</b></p><p class="muted">Ações perdidas não movimentam o painel financeiro.</p></div></div></div><div class="section"><h2>Ações da semana</h2>
 
             <div class="cards3">
                 {"".join(action_cards)}
@@ -2167,11 +2179,7 @@ def actions():
                 </p>
 
                 <p class="muted">
-                    Bandidos:
-                    {data.get("bandits","—")}
-                    ·
-                    Policiais:
-                    {data.get("police","—")}
+                    Participantes: {data.get("bandits","—")}
                 </p>
 
                 <a
@@ -2298,17 +2306,13 @@ def action_detail(action_id):
                 '0'
             ) == '1'
 
-            side = request.form.get(
-                f'side_{mid}',
-                'BANDIDO'
-            )
 
             participants.append(
                 (
                     'member',
                     int(mid),
                     None,
-                    side,
+                    'BANDIDO',
                     participant_eligible
                 )
             )
@@ -2323,10 +2327,6 @@ def action_detail(action_id):
                 '0'
             ) == '1'
 
-            side = request.form.get(
-                f'external_side_{i}',
-                'BANDIDO'
-            )
 
             participants.append(
                 (
@@ -2341,7 +2341,7 @@ def action_detail(action_id):
                         if i < len(ext_fams)
                         else ''
                     ),
-                    side,
+                    'BANDIDO',
                     participant_eligible
                 )
             )
@@ -2357,17 +2357,7 @@ def action_detail(action_id):
                 request.url
             )
 
-        b = sum(
-            1
-            for x in participants
-            if x[3] == 'BANDIDO'
-        )
-
-        p = sum(
-            1
-            for x in participants
-            if x[3] == 'POLICIAL'
-        )
+        b = len(participants)
 
         def check_count(rule, val):
 
@@ -2406,28 +2396,14 @@ def action_detail(action_id):
 
             return True
 
-        if (
-            not check_count(
-                rules.get('bandits'),
-                b
-            )
-            or
-            not check_count(
-                rules.get('police'),
-                p
-            )
-        ):
+        if not check_count(rules.get('bandits'), b):
+            flash(f'Quantidade inválida. Participantes: {b}.', 'error')
+            return redirect(request.url)
 
-            flash(
-                f'Quantidade inválida. '
-                f'Bandidos: {b}. '
-                f'Policiais: {p}.',
-                'error'
-            )
-
-            return redirect(
-                request.url
-            )
+        result_status = request.form.get('status', 'GANHADA').upper()
+        if result_status not in ('GANHADA', 'PERDIDA'):
+            flash('Resultado da ação inválido.', 'error')
+            return redirect(request.url)
 
         c = conn()
 
@@ -2462,20 +2438,13 @@ def action_detail(action_id):
                 a['action_value'] or 0
             )
 
-            family = round(
-                value * .5,
-                2
-            )
-
-            pool = round(
-                value - family,
-                2
-            )
+            family = round(value * .5, 2) if result_status == 'GANHADA' else 0
+            pool = round(value - family, 2) if result_status == 'GANHADA' else 0
 
             eligible = [
                 x
                 for x in participants
-                if x[4]
+                if x[4] and result_status == 'GANHADA'
             ]
 
             cents = int(
@@ -2505,9 +2474,10 @@ def action_detail(action_id):
                     participant_pool,
                     rules_snapshot,
                     created_by,
-                    created_at
+                    created_at,
+                    status
                 )
-                VALUES(?,?,?,?,?,?,?,?)
+                VALUES(?,?,?,?,?,?,?,?,?)
                 ''',
                 (
                     action_id,
@@ -2520,49 +2490,52 @@ def action_detail(action_id):
                         ensure_ascii=False
                     ),
                     session['uid'],
-                    now()
+                    now(),
+                    result_status
                 )
             ).lastrowid
 
-            c.execute(
-                '''
-                INSERT INTO financial_transactions(
-                    record_id,
-                    type,
-                    amount,
-                    description,
-                    created_at
-                )
-                VALUES(?,?,?,?,?)
-                ''',
-                (
-                    rid,
-                    'FAMILIA',
-                    family,
-                    '50% da família',
-                    now()
-                )
-            )
+            if result_status == 'GANHADA':
 
-            c.execute(
-                '''
-                INSERT INTO financial_transactions(
-                    record_id,
-                    type,
-                    amount,
-                    description,
-                    created_at
+                c.execute(
+                    '''
+                    INSERT INTO financial_transactions(
+                        record_id,
+                        type,
+                        amount,
+                        description,
+                        created_at
+                    )
+                    VALUES(?,?,?,?,?)
+                    ''',
+                    (
+                        rid,
+                        'FAMILIA',
+                        family,
+                        '50% da família',
+                        now()
+                    )
                 )
-                VALUES(?,?,?,?,?)
-                ''',
-                (
-                    rid,
-                    'PARTICIPANTES',
-                    pool,
-                    '50% distribuídos entre elegíveis',
-                    now()
+
+                c.execute(
+                    '''
+                    INSERT INTO financial_transactions(
+                        record_id,
+                        type,
+                        amount,
+                        description,
+                        created_at
+                    )
+                    VALUES(?,?,?,?,?)
+                    ''',
+                    (
+                        rid,
+                        'PARTICIPANTES',
+                        pool,
+                        '50% distribuídos entre elegíveis',
+                        now()
+                    )
                 )
-            )
 
             idx = 0
 
@@ -2584,7 +2557,7 @@ def action_detail(action_id):
                         ext
                     ).lastrowid
 
-                ok = bool(participant_eligible)
+                ok = bool(participant_eligible) and result_status == 'GANHADA'
 
                 amount = (
                     each
@@ -2624,7 +2597,7 @@ def action_detail(action_id):
                         ''
                         if ok
                         else
-                        'Não elegível para a divisão',
+                        ('Ação perdida' if result_status == 'PERDIDA' else 'Não elegível para a divisão'),
                         now()
                     )
                 )
@@ -2761,28 +2734,6 @@ def action_detail(action_id):
                         style="margin-top:10px"
                     >
 
-                        <div class="field">
-
-                            <label>
-                                Equipe
-                            </label>
-
-                            <select
-                                class="select"
-                                data-side
-                            >
-
-                                <option>
-                                    BANDIDO
-                                </option>
-
-                                <option>
-                                    POLICIAL
-                                </option>
-
-                            </select>
-
-                        </div>
 
                         <div class="field">
 
@@ -2826,18 +2777,10 @@ def action_detail(action_id):
                 '.membercard'
             );
 
-        let side =
-            r.querySelector(
-                '[data-side]'
-            );
-
         let eligible =
             r.querySelector(
                 '[data-eligible]'
             );
-
-        side.name =
-            'side_' + s.value;
 
         eligible.name =
             'eligible_' + s.value;
@@ -2902,28 +2845,6 @@ def action_detail(action_id):
 
                         </div>
 
-                        <div class="field">
-
-                            <label>
-                                Equipe
-                            </label>
-
-                            <select
-                                class="select"
-                                name="external_side_${{i}}"
-                            >
-
-                                <option>
-                                    BANDIDO
-                                </option>
-
-                                <option>
-                                    POLICIAL
-                                </option>
-
-                            </select>
-
-                        </div>
 
                         <div class="field">
 
@@ -3059,6 +2980,15 @@ def action_detail(action_id):
 
                 <div id="externalRows"></div>
 
+            </div>
+
+            <div class="field section">
+                <label>Resultado da ação</label>
+                <select class="select" name="status" required>
+                    <option value="GANHADA">Ganhada</option>
+                    <option value="PERDIDA">Perdida</option>
+                </select>
+                <span class="muted">Ações perdidas ficam no histórico, mas não movimentam o painel financeiro.</span>
             </div>
 
             <button
