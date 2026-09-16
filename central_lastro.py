@@ -1053,6 +1053,14 @@ a{
     gap:10px
 }
 
+.chart-card{position:relative;overflow:hidden}
+.chart-layout{display:grid;grid-template-columns:145px 1fr;gap:22px;align-items:center}
+.chart-ring{position:relative;width:128px;height:128px;margin:auto;border-radius:50%;background:conic-gradient(#d6b25e 100%,rgba(255,255,255,.06) 100%);display:grid;place-items:center;box-shadow:0 0 0 10px rgba(212,175,55,.035),0 14px 30px rgba(0,0,0,.35)}
+.chart-ring:after{content:"";width:82px;height:82px;border-radius:50%;background:#0d0d0b;border:1px solid #3a2d12;box-shadow:inset 0 0 20px rgba(0,0,0,.35)}
+.chart-center{position:absolute;width:82px;text-align:center;z-index:1}.chart-center strong{display:block;color:var(--gold2);font-size:23px;line-height:1}.chart-center span{color:var(--muted);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.chart-bars{display:grid;gap:13px}.chart-bar-row{display:grid;grid-template-columns:94px 1fr 42px;gap:10px;align-items:center}.chart-bar-label{font-size:11px;color:#d8d0bd;text-transform:uppercase;letter-spacing:.06em}.chart-bar-track{height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.055);border:1px solid rgba(212,175,55,.08)}.chart-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#8e701e,#f0d477)}.chart-bar-value{text-align:right;color:var(--gold2);font-weight:800;font-size:12px}
+@media(max-width:720px){.chart-layout{grid-template-columns:1fr}.chart-bar-row{grid-template-columns:78px 1fr 34px}}
+
 .status-ok{
     color:#6fda9b
 }
@@ -1472,165 +1480,239 @@ def dashboard():
     ws = monday().isoformat()
 
     total = getall(
-        '''
+        """
         SELECT COALESCE(SUM(action_value),0) v
         FROM action_records
-        '''
+        """
     )[0]['v']
 
     week_total = getall(
-        '''
+        """
         SELECT COALESCE(SUM(family_value),0) v
         FROM action_records
         WHERE week_start=?
-        ''',
+        """,
+        (ws,)
+    )[0]['v']
+
+    member_pool = getall(
+        """
+        SELECT COALESCE(SUM(participant_pool),0) v
+        FROM action_records
+        WHERE week_start=?
+        """,
         (ws,)
     )[0]['v']
 
     actions_count = getall(
-        '''
+        """
         SELECT COUNT(*) n
         FROM action_records
         WHERE week_start=?
-        ''',
+        """,
         (ws,)
     )[0]['n']
 
-    members_count = getall(
-        '''
-        SELECT COUNT(DISTINCT member_id) n
+    participants = getall(
+        """
+        SELECT COUNT(DISTINCT ap.member_id) n
         FROM action_participants ap
-        JOIN action_records ar
-            ON ar.id=ap.record_id
+        JOIN action_records ar ON ar.id=ap.record_id
         WHERE ar.week_start=?
         AND ap.member_id IS NOT NULL
-        ''',
+        """,
         (ws,)
     )[0]['n']
 
+    farm_week = getall(
+        """
+        SELECT COALESCE(SUM(quantity),0) v
+        FROM farms
+        WHERE date(created_at)>=date(?)
+        AND date(created_at)<=date(?, '+6 day')
+        """,
+        (ws, ws)
+    )[0]['v']
+
+    active_members = getall(
+        """
+        SELECT COUNT(*) n
+        FROM members
+        WHERE active=1
+        """
+    )[0]['n']
+
+    recent = getall(
+        """
+        SELECT ar.id, ar.created_at, ar.action_value, a.name
+        FROM action_records ar
+        JOIN actions a ON a.id=ar.action_id
+        ORDER BY ar.id DESC
+        LIMIT 8
+        """
+    )
+
+    recent_rows = ''.join(
+        f"""
+        <tr>
+            <td>{r['name']}</td>
+            <td>{r['created_at'][:10]}</td>
+            <td>{money(r['action_value'])}</td>
+            <td><a href="{url_for('result', record_id=r['id'])}">Ver</a></td>
+        </tr>
+        """
+        for r in recent
+    ) or """
+        <tr><td colspan="4" class="muted">Nenhuma ação registrada ainda.</td></tr>
+    """
+
+    top = getall(
+        """
+        SELECT
+            m.id,
+            m.name,
+            m.cargo,
+            COUNT(ap.id) qty,
+            COALESCE(SUM(ap.value_received),0) received
+        FROM members m
+        LEFT JOIN action_participants ap ON ap.member_id=m.id
+        WHERE m.active=1
+        GROUP BY m.id
+        ORDER BY qty DESC, received DESC, m.name
+        LIMIT 5
+        """
+    )
+
+    top_rows = ''.join(
+        f"""
+        <tr>
+            <td>{m['name']}</td>
+            <td>{m['cargo']}</td>
+            <td>{m['qty']}</td>
+            <td>{money(m['received'])}</td>
+        </tr>
+        """
+        for m in top
+    ) or """
+        <tr><td colspan="4" class="muted">Ainda não há participações.</td></tr>
+    """
+
+    max_metric = max(
+        float(actions_count or 0),
+        float(participants or 0),
+        float(farm_week or 0),
+        1.0
+    )
+
+    actions_pct = round(float(actions_count or 0) * 100 / max_metric)
+    participants_pct = round(float(participants or 0) * 100 / max_metric)
+    farm_pct = round(float(farm_week or 0) * 100 / max_metric)
+
     cards = ''.join(
-        f'''
+        f"""
         <div class="card">
-
-            <div class="label">
-                {label}
-            </div>
-
-            <div class="metric">
-                {value}
-            </div>
-
+            <div class="label">{label}</div>
+            <div class="metric">{value}</div>
+            <div class="muted" style="margin-top:6px;font-size:12px">{desc}</div>
         </div>
-        '''
-        for label, value in [
-            (
-                'Total movimentado',
-                money(total)
-            ),
-            (
-                'Lucro semanal',
-                money(week_total)
-            ),
-            (
-                'Ações realizadas',
-                actions_count
-            ),
-            (
-                'Membros participantes',
-                members_count
-            )
+        """
+        for label, value, desc in [
+            ('Total movimentado', money(total), 'Valor acumulado das ações'),
+            ('Lucro semanal', money(week_total), 'Parte da família nesta semana'),
+            ('Ações realizadas', actions_count, 'Total registrado nesta semana'),
+            ('Membros participantes', participants, 'Membros que participaram nesta semana')
         ]
     )
 
-    action_cards = []
-
-    for a in getall(
-        '''
-        SELECT *
-        FROM actions
-        WHERE active=1
-        ORDER BY id
-        '''
-    ):
-
-        n = getall(
-            '''
-            SELECT COUNT(*) n
-            FROM action_records
-            WHERE action_id=?
-            AND week_start=?
-            ''',
-            (
-                a['id'],
-                ws
-            )
-        )[0]['n']
-
-        lim = a['weekly_limit']
-
-        lock = (
-            lim is not None
-            and n >= lim
-        )
-
-        action_cards.append(
-            f'''
-            <div class="card">
-
-                <span class="pill">
-                    {n}/{lim if lim is not None else "∞"}
-                </span>
-
-                <h2>{a["name"]}</h2>
-
-                <p class="muted">
-                    Valor:
-                    {
-                        money(a["action_value"])
-                        if a["action_value"]
-                        else
-                        "Ainda não definido"
-                    }
-                </p>
-
-                <a
-                    class="btn {"secondary" if lock else ""}"
-                    href="{url_for(
-                        "action_detail",
-                        action_id=a["id"]
-                    )}"
-                >
-                    {
-                        "Limite atingido"
-                        if lock
-                        else
-                        "Abrir ação"
-                    }
-                </a>
-
-            </div>
-            '''
-        )
-
     return shell(
         'Painel',
-        f'''
-        <div class="grid">
+        f"""
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap">
+                <div>
+                    <div class="label">PAINEL PRINCIPAL</div>
+                    <h1 style="margin:4px 0">Central de Inteligência</h1>
+                    <p class="muted" style="margin:0">Dashboard da Família Lastro · semana iniciada em {ws}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid section">
             {cards}
         </div>
 
-        <div class="section">
-
-            <h2>
-                Ações da semana
-            </h2>
-
-            <div class="cards3">
-                {"".join(action_cards)}
+        <div class="cards3 section">
+            <div class="card chart-card">
+                <div class="label">GRÁFICO DE ATIVIDADE</div>
+                <div class="chart-layout" style="margin-top:14px">
+                    <div class="chart-ring">
+                        <div class="chart-center">
+                            <strong>{actions_count}</strong>
+                            <span>Ações</span>
+                        </div>
+                    </div>
+                    <div class="chart-bars">
+                        <div class="chart-bar-row">
+                            <span class="chart-bar-label">Ações</span>
+                            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:{actions_pct}%"></div></div>
+                            <span class="chart-bar-value">{actions_count}</span>
+                        </div>
+                        <div class="chart-bar-row">
+                            <span class="chart-bar-label">Participantes</span>
+                            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:{participants_pct}%"></div></div>
+                            <span class="chart-bar-value">{participants}</span>
+                        </div>
+                        <div class="chart-bar-row">
+                            <span class="chart-bar-label">Farm</span>
+                            <div class="chart-bar-track"><div class="chart-bar-fill" style="width:{farm_pct}%"></div></div>
+                            <span class="chart-bar-value">{farm_week:g}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="muted" style="margin-top:14px;font-size:11px">Atividade registrada nesta semana</div>
             </div>
 
+            <div class="card">
+                <div class="label">DIVISÃO FINANCEIRA</div>
+                <div style="font-size:26px;font-weight:800;margin-top:12px">50% / 50%</div>
+                <div class="muted" style="margin-top:8px">Família: {money(week_total)}</div>
+                <div class="muted">Membros: {money(member_pool)}</div>
+                <div class="muted" style="margin-top:8px">Total da semana: {money(week_total + member_pool)}</div>
+            </div>
+
+            <div class="card">
+                <div class="label">INDICADORES</div>
+                <div style="margin-top:12px;line-height:1.9">
+                    Membros ativos: {active_members}<br>
+                    Participantes na semana: {participants}<br>
+                    Farm na semana: {farm_week:g}<br>
+                    Ações realizadas: {actions_count}
+                </div>
+            </div>
         </div>
-        '''
+
+        <div class="cards3 section">
+            <div class="card tablewrap">
+                <h2>Atividade recente</h2>
+                <table class="table">
+                    <tr><th>Ação</th><th>Data</th><th>Valor</th><th></th></tr>
+                    {recent_rows}
+                </table>
+            </div>
+
+            <div class="card tablewrap">
+                <h2>Destaques dos membros</h2>
+                <table class="table">
+                    <tr><th>Membro</th><th>Cargo</th><th>Participações</th><th>Recebido</th></tr>
+                    {top_rows}
+                </table>
+            </div>
+        </div>
+
+        <script>
+        setTimeout(() => {{ if (!document.hidden) window.location.reload(); }}, 25000);
+        </script>
+        """
     )
 
 
