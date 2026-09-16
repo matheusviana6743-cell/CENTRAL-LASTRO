@@ -1142,7 +1142,6 @@ def shell(title, body):
 
         items += [
             ('Usuários','users'),
-            ('Admin','admin_actions'),
             ('Externos','externals'),
             ('Logs','logs')
         ]
@@ -2400,10 +2399,7 @@ def action_detail(action_id):
                 'INDEFINIDO'
             )
 
-            side = request.form.get(
-                f'side_{mid}',
-                'BANDIDO'
-            )
+            side = 'PARTICIPANTE'
 
             if weapon == 'INDEFINIDO':
 
@@ -2436,10 +2432,7 @@ def action_detail(action_id):
                 'INDEFINIDO'
             )
 
-            side = request.form.get(
-                f'external_side_{i}',
-                'BANDIDO'
-            )
+            side = 'PARTICIPANTE'
 
             if weapon == 'INDEFINIDO':
 
@@ -2474,78 +2467,6 @@ def action_detail(action_id):
 
             flash(
                 'Adicione pelo menos um participante.',
-                'error'
-            )
-
-            return redirect(
-                request.url
-            )
-
-        b = sum(
-            1
-            for x in participants
-            if x[3] == 'BANDIDO'
-        )
-
-        p = sum(
-            1
-            for x in participants
-            if x[3] == 'POLICIAL'
-        )
-
-        def check_count(rule, val):
-
-            text = str(
-                rule or ''
-            ).lower()
-
-            m = re.search(
-                r'(\d+)\s*a\s*(\d+)',
-                text
-            )
-
-            if m:
-
-                if not (
-                    int(m.group(1))
-                    <= val
-                    <= int(m.group(2))
-                ):
-                    return False
-
-            if (
-                'igual ao número' in text
-                and val != b
-            ):
-                return False
-
-            if (
-                re.fullmatch(
-                    r'\d+',
-                    text
-                )
-                and val != int(text)
-            ):
-                return False
-
-            return True
-
-        if (
-            not check_count(
-                rules.get('bandits'),
-                b
-            )
-            or
-            not check_count(
-                rules.get('police'),
-                p
-            )
-        ):
-
-            flash(
-                f'Quantidade inválida. '
-                f'Bandidos: {b}. '
-                f'Policiais: {p}.',
                 'error'
             )
 
@@ -2890,29 +2811,6 @@ def action_detail(action_id):
                         <div class="field">
 
                             <label>
-                                Equipe
-                            </label>
-
-                            <select
-                                class="select"
-                                data-side
-                            >
-
-                                <option>
-                                    BANDIDO
-                                </option>
-
-                                <option>
-                                    POLICIAL
-                                </option>
-
-                            </select>
-
-                        </div>
-
-                        <div class="field">
-
-                            <label>
                                 Armamento
                             </label>
 
@@ -2961,18 +2859,10 @@ def action_detail(action_id):
                 '.membercard'
             );
 
-        let side =
-            r.querySelector(
-                '[data-side]'
-            );
-
         let weapon =
             r.querySelector(
                 '[data-weapon]'
             );
-
-        side.name =
-            'side_' + s.value;
 
         weapon.name =
             'weapon_' + s.value;
@@ -3034,29 +2924,6 @@ def action_detail(action_id):
                                 name="external_family"
                                 required
                             >
-
-                        </div>
-
-                        <div class="field">
-
-                            <label>
-                                Equipe
-                            </label>
-
-                            <select
-                                class="select"
-                                name="external_side_${{i}}"
-                            >
-
-                                <option>
-                                    BANDIDO
-                                </option>
-
-                                <option>
-                                    POLICIAL
-                                </option>
-
-                            </select>
 
                         </div>
 
@@ -3600,64 +3467,48 @@ def members():
         )
     )
 
-    tr = ''.join(
-        f'''
-        <tr>
+    rows_html = []
 
-            <td>{m["name"]}</td>
+    for m in rows:
 
-            <td>
-                {m["passport"] or "—"}
-            </td>
+        action_count = getall(
+            '''
+            SELECT COUNT(*) n
+            FROM action_participants
+            WHERE member_id=?
+            ''',
+            (m['id'],)
+        )[0]['n']
 
-            <td>
-                {m["cargo"]}
-            </td>
+        farm_total = getall(
+            '''
+            SELECT COALESCE(SUM(quantity),0) v
+            FROM farms
+            WHERE member_id=?
+            ''',
+            (m['id'],)
+        )[0]['v']
 
-            <td>
-                {
-                    getall(
-                        '''
-                        SELECT COUNT(*) n
-                        FROM action_participants
-                        WHERE member_id=?
-                        ''',
-                        (m["id"],)
-                    )[0]["n"]
-                }
-            </td>
+        edit_html = (
+            f'<a href="{url_for("member_edit", member_id=m["id"])}">Editar</a>'
+            if session.get('role') == 'ADMINISTRADOR'
+            else '—'
+        )
 
-            <td>
-                {
-                    getall(
-                        '''
-                        SELECT
-                            COALESCE(SUM(quantity),0) v
-                        FROM farms
-                        WHERE member_id=?
-                        ''',
-                        (m["id"],)
-                    )[0]["v"]:g
-                }
-            </td>
+        rows_html.append(
+            f'''
+            <tr>
+                <td>{m['name']}</td>
+                <td>{m['passport'] or '—'}</td>
+                <td>{m['cargo']}</td>
+                <td>{action_count}</td>
+                <td>{farm_total:g}</td>
+                <td>{edit_html}</td>
+            </tr>
+            '''
+        )
 
-            <td>
-                {
-                    f'<a href="{url_for(
-                        "member_edit",
-                        member_id=m["id"]
-                    )}">Editar</a>'
-                    if session.get("role")
-                    == "ADMINISTRADOR"
-                    else
-                    "—"
-                }
-            </td>
-
-        </tr>
-        '''
-        for m in rows
-    )
+    tr = ''.join(rows_html)
 
     return shell(
         'Hierarquia',
