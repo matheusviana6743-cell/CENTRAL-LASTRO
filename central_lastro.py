@@ -717,7 +717,6 @@ def setup_request():
         )
 
     c.commit()
-    c.close()
 
     # CSRF em toda alteração feita por formulário.
     # O formulário de login também possui token, sem mudar a interface.
@@ -736,6 +735,8 @@ def setup_request():
         else:
             session['name'] = current['name']
             session['role'] = current['role']
+
+    c.close()
 
 
 # ============================================================
