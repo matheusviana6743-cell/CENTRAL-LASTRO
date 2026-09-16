@@ -3353,7 +3353,7 @@ def ranking():
         </tr>
         '''
         for i, x in enumerate(
-            farm,
+            farm[:10],
             1
         )
     )
@@ -3370,7 +3370,7 @@ def ranking():
         </tr>
         '''
         for i, x in enumerate(
-            action,
+            action[:10],
             1
         )
     )
