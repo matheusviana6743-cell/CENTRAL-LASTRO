@@ -2390,6 +2390,17 @@ def actions():
 # DETALHES DA AÇÃO
 # ============================================================
 
+def minimum_bandits(rule):
+    text = str(rule or '').strip().lower()
+    match = re.search(r'(\d+)\s*a\s*(\d+)', text)
+    if match:
+        return int(match.group(1))
+    match = re.fullmatch(r'\d+', text)
+    if match:
+        return int(match.group(0))
+    return 0
+
+
 @app.route(
     '/actions/<int:action_id>',
     methods=['GET','POST']
@@ -2432,6 +2443,7 @@ def action_detail(action_id):
     )[0]['n']
 
     lim = a['weekly_limit']
+    minimum_slots = minimum_bandits(rules.get('bandits'))
 
     if request.method == 'POST':
 
@@ -2951,6 +2963,15 @@ def action_detail(action_id):
 
     }}
 
+    function initializeParticipants() {{
+
+        const minimum = {minimum_slots};
+
+        for (let i = 0; i < minimum; i++) {{
+            addMember();
+        }}
+    }}
+
     function addExternal() {{
 
         let i = extIndex++;
@@ -3051,6 +3072,11 @@ def action_detail(action_id):
 
     }}
 
+    document.addEventListener(
+        'DOMContentLoaded',
+        initializeParticipants
+    );
+
     </script>
     '''
 
@@ -3098,20 +3124,28 @@ def action_detail(action_id):
                         display:flex;
                         justify-content:space-between;
                         gap:10px;
-                        align-items:center
+                        align-items:center;
+                        flex-wrap:wrap
                     "
                 >
 
-                    <h2>
-                        Participantes da família
-                    </h2>
+                    <div>
+                        <h2>
+                            Participações da família
+                        </h2>
+
+                        <p class="muted" style="margin:4px 0 0">
+                            {minimum_slots} participação(s) criada(s) automaticamente pelo mínimo da ação.
+                            Você pode remover ou adicionar mais.
+                        </p>
+                    </div>
 
                     <button
                         class="btn secondary"
                         type="button"
                         onclick="addMember()"
                     >
-                        + Selecionar membro
+                        + Adicionar participação
                     </button>
 
                 </div>
