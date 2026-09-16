@@ -927,28 +927,21 @@ a{
 }
 
 .tablewrap{
-    overflow:hidden;
-    min-width:0
+    overflow:auto
 }
 
 .table{
     width:100%;
-    table-layout:fixed;
+    min-width:640px;
     border-collapse:collapse
 }
 
 .table th,
 .table td{
-    padding:11px 8px;
+    padding:11px;
     border-bottom:1px solid #2a220f;
     text-align:left;
-    white-space:normal;
-    overflow-wrap:anywhere
-}
-
-.table th:first-child,
-.table td:first-child{
-    padding-left:10px
+    white-space:nowrap
 }
 
 .table th{
@@ -990,10 +983,6 @@ a{
     font-size:10px;
     text-transform:uppercase;
     margin-bottom:5px
-}
-
-.table a{
-    overflow-wrap:anywhere
 }
 
 .membercard{
@@ -1080,16 +1069,6 @@ a{
 
 @media(max-width:720px){
 
-    .table{
-        table-layout:auto;
-        font-size:12px
-    }
-
-    .table th,
-    .table td{
-        padding:9px 6px
-    }
-
     .side{
         position:static;
         width:auto;
@@ -1153,10 +1132,16 @@ def shell(title, body):
     passport=me['passport'] or me['member_passport'] or '—'
     display_role='Elite' if str(me['role']).upper()=='ELITE.AI' else me['role']
     avatar_html=(f'<img class="avatar" src="{url_for("avatar_file",user_id=session.get('uid'))}" alt="Foto">' if me['avatar'] else f'<div class="avatar">{(me["name"] or "?")[0].upper()}</div>')
+
+    # Atualização automática apenas nas páginas de consulta.
+    # Dashboard e Ranking recarregam a cada 25 segundos, sem indicador visual.
+    auto_refresh = ''
+    if title in ('Painel', 'Ranking'):
+        auto_refresh = '<script>(function(){let remaining=25;const tick=setInterval(function(){if(document.hidden)return;remaining-=1;if(remaining<=0){clearInterval(tick);window.location.reload();}},1000);})();</script>'
     return render_template_string(f'''
         <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} · CENTRAL LASTRO</title><style>{CSS}</style></head>
         <body><div class="layout"><aside class="side"><div class="brand" id="lastroBrand"><b>LASTRO</b><small>EMPRESA</small></div><nav class="nav">{nav}</nav><a class="btn secondary" style="width:100%;margin-top:22px" href="{url_for('logout')}">Sair</a></aside>
-        <main class="main"><div class="top"><h1>{title}</h1><a class="top-user" href="{url_for('profile')}">{avatar_html}<span class="top-user-info"><span class="top-user-name">{me['name']}</span><span class="top-user-meta">Passaporte {passport} · {display_role}</span></span></a></div>{messages}{body}</main></div>
+        <main class="main"><div class="top"><div style="display:flex;align-items:center;gap:12px;min-width:0"><h1>{title}</h1>{auto_refresh}</div><a class="top-user" href="{url_for('profile')}">{avatar_html}<span class="top-user-info"><span class="top-user-name">{me['name']}</span><span class="top-user-meta">Passaporte {passport} · {display_role}</span></span></a></div>{messages}{body}</main></div>
         <script>document.addEventListener('keydown',function(e){{if(e.ctrlKey&&e.shiftKey&&e.key.toLowerCase()==='l'){{window.location.href='{url_for("logs") if session.get("role")=="ADMINISTRADOR" else url_for("dashboard")}';}}}});let lc=0,lt=0;const lb=document.getElementById('lastroBrand');if(lb){{lb.addEventListener('click',function(){{const n=Date.now();if(n-lt>1800)lc=0;lt=n;lc++;if(lc>=7){{lc=0;window.location.href='{url_for("logs") if session.get("role")=="ADMINISTRADOR" else url_for("dashboard")}';}}}});}}</script></body></html>''')
 
 # ============================================================
