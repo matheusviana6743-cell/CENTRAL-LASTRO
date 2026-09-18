@@ -1238,12 +1238,11 @@ def shell(title, body):
 @app.after_request
 def security_headers(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-    response.headers.setdefault('X-Frame-Options', 'DENY')
-    response.headers.setdefault('Referrer-Policy', 'no-referrer')
+        response.headers.setdefault('Referrer-Policy', 'no-referrer')
     response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()')
     response.headers.setdefault(
         'Content-Security-Policy',
-        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; form-action 'self'; frame-ancestors 'self' https:; base-uri 'self'; object-src 'none'"
     )
     if request.is_secure:
         response.headers.setdefault(
