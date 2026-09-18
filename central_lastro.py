@@ -851,6 +851,32 @@ a{
     gap:15px
 }
 
+.ranking-panels{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:15px;
+}
+
+.ranking-panels .table{
+    table-layout:fixed;
+}
+
+.ranking-panels .table th,
+.ranking-panels .table td{
+    white-space:normal;
+    overflow-wrap:anywhere;
+}
+
+.ranking-panels .table th:first-child,
+.ranking-panels .table td:first-child{
+    width:44px;
+}
+
+.ranking-panels .table th:nth-child(3),
+.ranking-panels .table td:nth-child(3){
+    width:92px;
+}
+
 .card{
     background:
         linear-gradient(
@@ -1096,6 +1122,7 @@ a{
 
     .grid,
     .cards3,
+    .ranking-panels,
     .formgrid,
     .rules{
         grid-template-columns:1fr
@@ -2567,6 +2594,25 @@ def action_detail(action_id):
                 request.url
             )
 
+        action_result = request.form.get(
+            'action_result',
+            ''
+        ).strip().upper()
+
+        if action_result not in {
+            'GANHA',
+            'PERDIDA'
+        }:
+
+            flash(
+                'Selecione se a ação foi ganha ou perdida.',
+                'error'
+            )
+
+            return redirect(
+                request.url
+            )
+
         c = conn()
 
         try:
@@ -2643,9 +2689,10 @@ def action_detail(action_id):
                     participant_pool,
                     rules_snapshot,
                     created_by,
-                    created_at
+                    created_at,
+                    status
                 )
-                VALUES(?,?,?,?,?,?,?,?)
+                VALUES(?,?,?,?,?,?,?,?,?)
                 ''',
                 (
                     action_id,
@@ -2658,7 +2705,8 @@ def action_detail(action_id):
                         ensure_ascii=False
                     ),
                     session['uid'],
-                    now()
+                    now(),
+                    action_result
                 )
             ).lastrowid
 
@@ -3187,6 +3235,42 @@ def action_detail(action_id):
 
             </div>
 
+            <div class="card section">
+
+                <div class="field">
+
+                    <label>
+                        Resultado da ação
+                    </label>
+
+                    <select
+                        class="select"
+                        name="action_result"
+                        required
+                    >
+
+                        <option value="">
+                            Selecione o resultado
+                        </option>
+
+                        <option value="GANHA">
+                            Ganha
+                        </option>
+
+                        <option value="PERDIDA">
+                            Perdida
+                        </option>
+
+                    </select>
+
+                    <span class="muted">
+                        Informe o resultado antes de finalizar.
+                    </span>
+
+                </div>
+
+            </div>
+
             <button
                 class="btn section"
                 style="width:100%"
@@ -3357,6 +3441,18 @@ def result(record_id):
 
             </div>
 
+            <div class="card">
+
+                <div class="label">
+                    Resultado
+                </div>
+
+                <div class="metric" style="font-size:22px">
+                    {"GANHA" if r["status"] == "GANHA" else "PERDIDA"}
+                </div>
+
+            </div>
+
         </div>
 
         <div class="card section tablewrap">
@@ -3493,7 +3589,7 @@ def ranking():
     return shell(
         'Ranking',
         f'''
-        <div class="cards3">
+        <div class="ranking-panels">
 
             <div class="card tablewrap">
 
