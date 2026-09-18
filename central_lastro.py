@@ -1238,7 +1238,7 @@ def shell(title, body):
 @app.after_request
 def security_headers(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-        response.headers.setdefault('Referrer-Policy', 'no-referrer')
+    response.headers.setdefault('Referrer-Policy', 'no-referrer')
     response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()')
     response.headers.setdefault(
         'Content-Security-Policy',
