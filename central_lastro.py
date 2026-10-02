@@ -1056,6 +1056,51 @@ a{
     margin-top:10px
 }
 
+.action-membercard{
+    grid-template-columns:minmax(0,1fr) 112px;
+}
+
+.action-membercard > div:first-child{
+    display:grid;
+    grid-template-columns:minmax(0,2fr) minmax(220px,1fr);
+    gap:14px;
+    align-items:end;
+    min-width:0;
+}
+
+.action-membercard > div:first-child > .select{
+    width:100%;
+    height:44px;
+    min-width:0;
+    margin:0;
+}
+
+.action-membercard .formgrid{
+    display:block;
+    margin-top:0 !important;
+    min-width:0;
+}
+
+.action-membercard .field{
+    gap:7px;
+}
+
+.action-membercard .field .select{
+    width:100%;
+    height:44px;
+    min-width:0;
+    margin:0;
+}
+
+.action-membercard .btn.danger{
+    width:112px;
+    min-width:112px;
+    height:44px;
+    padding:0 14px;
+    margin:0;
+    white-space:nowrap;
+}
+
 .loginpage{
     min-height:100vh;
     display:grid;
@@ -1107,6 +1152,19 @@ a{
 }
 
 @media(max-width:720px){
+
+    .action-membercard{
+        grid-template-columns:1fr;
+    }
+
+    .action-membercard > div:first-child{
+        grid-template-columns:1fr;
+    }
+
+    .action-membercard .btn.danger{
+        width:100%;
+        min-width:0;
+    }
 
     .side{
         position:static;
@@ -2926,7 +2984,7 @@ def action_detail(action_id):
 
         box.insertAdjacentHTML(
             'beforeend',
-            `<div class="membercard">
+            `<div class="membercard action-membercard">
 
                 <div>
 
